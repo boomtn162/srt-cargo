@@ -1,0 +1,1666 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>คำนวณค่าระวางห่อวัตถุ - การรถไฟแห่งประเทศไทย</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink-900:#1c1a2e;
+    --purple-900:#2f2566;
+    --purple-700:#4c3fb0;
+    --purple-600:#5a4bd6;
+    --purple-500:#6d5be8;
+    --purple-100:#eeecfc;
+    --purple-50:#f8f7fe;
+    --gold-600:#b8862e;
+    --gold-500:#d4a13a;
+    --gold-100:#fbf1de;
+    --ink:#20223a;
+    --muted:#6b7085;
+    --muted-2:#9a9db0;
+    --line:#e6e4f2;
+    --card:#ffffff;
+    --danger:#c0392b;
+    --danger-bg:#fdecea;
+    --ok:#177a52;
+    --ok-100:#e3f7ee;
+    --radius-lg:18px;
+    --radius-md:13px;
+    --radius-sm:9px;
+    --shadow-card:0 1px 2px rgba(32,25,80,.04), 0 10px 28px -14px rgba(32,25,80,.20);
+    --shadow-pop:0 20px 50px -18px rgba(32,25,80,.35);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--purple-50);color:var(--ink);font-family:'Sarabun',sans-serif;font-size:14.5px;line-height:1.5;}
+  h1,h2,h3{font-family:'Fraunces',serif; margin:0;}
+  ::selection{background:var(--purple-100);}
+  button{font-family:inherit;}
+
+  /* ================= HEADER ================= */
+  .topbar{
+    background:linear-gradient(120deg,var(--purple-900) 0%, var(--purple-600) 100%);
+    color:#fff; position:relative; overflow:hidden;
+  }
+  .topbar::before{
+    content:""; position:absolute; inset:0; opacity:.5;
+    background-image: repeating-linear-gradient(90deg, rgba(255,255,255,.08) 0 3px, transparent 3px 40px);
+  }
+  .topbar-inner{position:relative; max-width:1180px; margin:0 auto; padding:22px 24px; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;}
+  .brand{display:flex; align-items:center; gap:12px;}
+  .brand-mark{width:38px; height:38px; border-radius:10px; background:rgba(255,255,255,.14); display:flex; align-items:center; justify-content:center; font-size:19px; flex-shrink:0;}
+  .brand-text .eyebrow{font-size:10.5px; letter-spacing:.16em; text-transform:uppercase; opacity:.7; margin-bottom:1px;}
+  .brand-text h1{font-size:19px; font-weight:600; color:#fff;}
+  .topbar-tabs{display:flex; gap:6px;}
+  .tab-btn{
+    background:rgba(255,255,255,.10); color:#fff; border:1px solid rgba(255,255,255,.28);
+    padding:8px 16px; border-radius:999px; font-size:13px; cursor:pointer; font-weight:500;
+    transition:background .15s;
+  }
+  .tab-btn:hover{background:rgba(255,255,255,.2);}
+  .tab-btn.active{background:#fff; color:var(--purple-700); border-color:#fff; font-weight:600;}
+
+  .wrap{max-width:1180px; margin:0 auto; padding:28px 24px 80px;}
+  .view{display:none;}
+  .view.active{display:block; animation:fadein .25s ease;}
+  @keyframes fadein{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);}}
+
+  /* ================= ROUTE STRIP ================= */
+  .route-card{
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius-lg);
+    box-shadow:var(--shadow-card); padding:22px 24px; margin-bottom:22px;
+  }
+  .route-title{font-size:11.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted-2); font-weight:600; margin-bottom:14px;}
+  .route-grid{display:grid; grid-template-columns:1fr 44px 1fr 160px; gap:14px; align-items:end;}
+  @media(max-width:820px){.route-grid{grid-template-columns:1fr; gap:16px;} .route-arrow{display:none;}}
+  .route-field label{display:block; font-size:12px; color:var(--muted); margin-bottom:6px; font-weight:600;}
+  .route-arrow{display:flex; align-items:center; justify-content:center; color:var(--purple-300,var(--purple-500)); font-size:20px; padding-bottom:11px;}
+  .route-dist{background:var(--purple-50); border:1px solid var(--purple-100); border-radius:var(--radius-sm); padding:10px 14px; text-align:center;}
+  .route-dist .val{font-family:'Fraunces',serif; font-size:22px; font-weight:600; color:var(--purple-700); line-height:1.1;}
+  .route-dist .unit{font-size:11px; color:var(--muted); letter-spacing:.04em;}
+  .route-hint{grid-column:1/-1; font-size:12px; color:var(--muted); margin-top:2px;}
+  .route-hint.warn{color:var(--danger); font-weight:600;}
+
+  /* combo (searchable station picker) */
+  .combo{position:relative;}
+  .combo-input{width:100%; border:1.5px solid var(--line); background:#fbfbfe; border-radius:var(--radius-sm); padding:11px 13px; font-family:'Sarabun'; font-size:14px; color:var(--ink); outline:none; transition:border-color .15s;}
+  .combo-input:focus{border-color:var(--purple-500); background:#fff;}
+  .combo-list{display:none; position:absolute; top:calc(100% + 6px); left:0; right:0; max-height:300px; overflow-y:auto; background:#fff; border:1px solid var(--line); border-radius:var(--radius-md); box-shadow:var(--shadow-pop); z-index:500;}
+  .combo-list.show{display:block;}
+  .combo-item{padding:10px 13px; font-size:13.5px; cursor:pointer; border-bottom:1px solid #f3f2fa; display:flex; justify-content:space-between; gap:8px;}
+  .combo-item:last-child{border-bottom:none;}
+  .combo-item:hover{background:var(--purple-50);}
+  .combo-item .ckm{color:var(--muted); font-size:12px; white-space:nowrap;}
+  .combo-empty{padding:16px; text-align:center; color:var(--muted); font-size:13px;}
+
+  /* ================= RATE CARDS ================= */
+  .section-label{font-size:11.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted-2); font-weight:600; margin:26px 0 12px;}
+  .rate-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(260px,1fr)); gap:16px;}
+
+  .rate-card{
+    background:var(--card); border:1.5px solid var(--line); border-radius:var(--radius-lg);
+    padding:20px; box-shadow:var(--shadow-card); transition:border-color .18s, box-shadow .18s;
+    display:flex; flex-direction:column; gap:14px;
+  }
+  .rate-card.active{border-color:var(--purple-300,#c9c1f5); box-shadow:0 1px 2px rgba(32,25,80,.04), 0 14px 32px -14px rgba(109,91,232,.35);}
+  .rate-card-head{display:flex; align-items:center; gap:10px;}
+  .rate-icon{width:36px; height:36px; border-radius:10px; background:var(--purple-100); color:var(--purple-700); display:flex; align-items:center; justify-content:center; font-size:17px; flex-shrink:0;}
+  .rate-card.active .rate-icon{background:var(--purple-600); color:#fff;}
+  .rate-name{font-size:14.5px; font-weight:600; color:var(--ink); line-height:1.25;}
+  .rate-sub{font-size:11.5px; color:var(--muted);}
+
+  .rate-select{width:100%; border:1.5px solid var(--line); background:#fbfbfe; border-radius:var(--radius-sm); padding:9px 11px; font-family:'Sarabun'; font-size:13px; color:var(--ink);}
+  .weight-row{display:flex; align-items:center; gap:8px;}
+  .weight-input{flex:1; border:1.5px solid var(--line); background:#fbfbfe; border-radius:var(--radius-sm); padding:9px 11px; font-family:'Sarabun'; font-size:14px; color:var(--ink); outline:none;}
+  .weight-input:focus{border-color:var(--purple-500); background:#fff;}
+  .weight-unit{font-size:12.5px; color:var(--muted); white-space:nowrap;}
+
+  .rate-result{border-top:1px dashed var(--line); padding-top:12px; display:grid; grid-template-columns:1fr 1fr; gap:8px 10px;}
+  .rate-result .rr-label{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em;}
+  .rate-result .rr-val{font-family:'Fraunces',serif; font-size:15px; font-weight:600; color:var(--ink);}
+  .rate-result .rr-total{grid-column:1/-1; margin-top:2px; padding-top:10px; border-top:1px solid var(--line); display:flex; justify-content:space-between; align-items:baseline;}
+  .rate-result .rr-total .rr-label{font-size:12px; color:var(--purple-700); font-weight:600;}
+  .rate-result .rr-total .rr-val{font-size:22px; color:var(--purple-700);}
+  .rate-card.active .rate-result .rr-total .rr-val{color:var(--gold-600);}
+
+  .toggle-row{display:flex; align-items:center; gap:9px; cursor:pointer; user-select:none;}
+  .toggle-switch{width:38px; height:22px; border-radius:20px; background:var(--line); position:relative; transition:background .15s; flex-shrink:0;}
+  .toggle-switch::after{content:""; position:absolute; top:2px; left:2px; width:18px; height:18px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.25); transition:transform .15s;}
+  .toggle-row.on .toggle-switch{background:var(--purple-500);}
+  .toggle-row.on .toggle-switch::after{transform:translateX(16px);}
+  .toggle-label{font-size:13px; color:var(--ink); font-weight:500;}
+
+  /* ================= SUMMARY BAR ================= */
+  .summary-bar{
+    position:sticky; bottom:16px; margin-top:26px;
+    background:linear-gradient(120deg,var(--purple-900), var(--purple-700));
+    border-radius:var(--radius-lg); padding:18px 24px; color:#fff;
+    box-shadow:var(--shadow-pop); display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;
+  }
+  .summary-bar .sb-left{display:flex; gap:22px; flex-wrap:wrap;}
+  .summary-bar .sb-item .sb-label{font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; opacity:.7;}
+  .summary-bar .sb-item .sb-val{font-family:'Fraunces',serif; font-size:19px; font-weight:600;}
+  .summary-bar .sb-grand .sb-val{font-size:28px; color:var(--gold-500);}
+  .summary-bar .sb-actions{display:flex; gap:10px;}
+
+  .btn{border:none; border-radius:var(--radius-sm); padding:10px 18px; font-size:13.8px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:7px; transition:transform .1s, filter .15s;}
+  .btn:active{transform:scale(.97);}
+  .btn-light{background:rgba(255,255,255,.16); color:#fff; border:1px solid rgba(255,255,255,.35);}
+  .btn-light:hover{background:rgba(255,255,255,.26);}
+  .btn-primary{background:var(--purple-500); color:#fff;}
+  .btn-outline{background:#fff; color:var(--purple-600); border:1px solid #c9c3f5;}
+  .btn-ghost{background:var(--purple-50); color:var(--purple-700);}
+  .btn-danger{background:#fff; color:var(--danger); border:1px solid #f2c6c0;}
+  .btn-sm{padding:6px 11px; font-size:12.5px; border-radius:7px;}
+  .btn[disabled]{opacity:.45; cursor:not-allowed;}
+
+  /* ================= SETTINGS ================= */
+  .card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius-lg); box-shadow:var(--shadow-card); margin-bottom:20px;}
+  .card-head{padding:16px 22px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;}
+  .card-head h2{font-size:16px; margin:0; color:var(--purple-700); font-weight:600; display:flex; align-items:center; gap:9px;}
+  .card-head .icon{width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; background:var(--purple-100); border-radius:7px; font-size:12px;}
+  .card-body{padding:20px 22px;}
+  .hint{font-size:12px; color:var(--muted); margin-top:8px; line-height:1.5;}
+  .field label{display:block; font-size:12.8px; color:var(--muted); margin-bottom:6px; font-weight:500;}
+  input[type=text], input[type=number]{width:100%; border:1px solid var(--line); background:#fbfbfe; border-radius:9px; padding:10px 12px; font-family:'Sarabun'; font-size:14px; color:var(--ink); outline:none;}
+  input:focus{border-color:var(--purple-500); background:#fff;}
+  input:disabled{background:#f1f0f7; color:var(--muted); cursor:not-allowed;}
+  .grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:16px 20px;}
+  @media(max-width:760px){.grid3{grid-template-columns:1fr;}}
+
+  .table-wrap{overflow-x:auto; border:1px solid var(--line); border-radius:11px;}
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  thead th{background:var(--purple-50); color:var(--purple-700); text-align:left; padding:10px 12px; font-weight:600; white-space:nowrap; border-bottom:1px solid var(--line);}
+  tbody td{padding:10px 12px; border-bottom:1px solid #f0eff8; white-space:nowrap;}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:hover{background:#fbfaff;}
+  .num-cell{text-align:right; font-variant-numeric:tabular-nums;}
+  .icon-btn{width:28px; height:28px; border-radius:7px; border:1px solid var(--line); background:#fff; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; font-size:13px;}
+  .icon-btn:hover{background:var(--purple-50);}
+
+  .settings-list{display:flex; flex-direction:column; gap:10px;}
+  .settings-row{display:grid; grid-template-columns:1.6fr .8fr .8fr .8fr auto; gap:10px; align-items:center; padding:10px; border:1px solid var(--line); border-radius:9px;}
+  .settings-row.head{background:var(--purple-50); font-size:12px; color:var(--muted); font-weight:600;}
+  @media(max-width:820px){.settings-row{grid-template-columns:1fr 1fr;}}
+
+  footer{text-align:center; color:var(--muted); font-size:12px; padding:20px 24px 30px; opacity:.75;}
+
+  @media print{
+    .topbar, .btn, footer, .no-print, .summary-bar .sb-actions{display:none !important;}
+    body{background:#fff;}
+    .rate-card, .route-card{box-shadow:none; border:1px solid #ccc;}
+    .summary-bar{position:static; background:#f5f4fb !important; color:var(--ink) !important;}
+    .summary-bar .sb-val{color:var(--purple-700) !important;}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <div class="brand-mark">🚆</div>
+      <div class="brand-text">
+        <div class="eyebrow">การรถไฟแห่งประเทศไทย</div>
+        <h1>คำนวณค่าระวางห่อวัตถุ</h1>
+      </div>
+    </div>
+    <div class="topbar-tabs">
+      <button class="tab-btn active" data-view="form">🧮 คำนวณ</button>
+      <button class="tab-btn" data-view="settings">⚙️ ตั้งค่า</button>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- ============ FORM VIEW ============ -->
+  <div class="view active" id="view-form">
+
+    <div class="route-card">
+      <div class="route-title">เส้นทางขนส่ง</div>
+      <div class="route-grid">
+        <div class="route-field">
+          <label>สถานีส่ง</label>
+          <div class="combo" id="combo-rt-from">
+            <input type="text" id="rt-from-search" class="combo-input" placeholder="พิมพ์ชื่อหรือรหัสสถานี..." autocomplete="off">
+            <input type="hidden" id="rt-from">
+            <div class="combo-list" id="rt-from-list"></div>
+          </div>
+        </div>
+        <div class="route-arrow">→</div>
+        <div class="route-field">
+          <label>สถานีรับ</label>
+          <div class="combo" id="combo-rt-to">
+            <input type="text" id="rt-to-search" class="combo-input" placeholder="พิมพ์ชื่อหรือรหัสสถานี..." autocomplete="off">
+            <input type="hidden" id="rt-to">
+            <div class="combo-list" id="rt-to-list"></div>
+          </div>
+        </div>
+        <div class="route-dist">
+          <div class="val" id="rt-dist-val">—</div>
+          <div class="unit">กิโลเมตร</div>
+          <input type="hidden" id="rt-dist" value="0">
+        </div>
+        <div class="route-hint" id="rt-km-hint">เลือกสถานีทั้งสองฝั่งเพื่อคำนวณระยะทางอัตโนมัติ</div>
+      </div>
+    </div>
+
+    <div class="section-label">เลือกประเภทสิ่งของ ใส่น้ำหนัก แล้วดูค่าระวางได้ทันที</div>
+    <div class="rate-grid" id="rate-grid"></div>
+
+    <div class="summary-bar">
+      <div class="sb-left">
+        <div class="sb-item"><div class="sb-label">รวมค่าระวาง</div><div class="sb-val" id="sb-freight">0</div></div>
+        <div class="sb-item"><div class="sb-label">รวมค่าธรรมเนียม</div><div class="sb-val" id="sb-fee">0</div></div>
+        <div class="sb-item sb-grand"><div class="sb-label">รวมทั้งหมด</div><div class="sb-val" id="sb-total">0 บาท</div></div>
+      </div>
+      <div class="sb-actions">
+        <button class="btn btn-light" id="btn-print">🖨 พิมพ์</button>
+        <button class="btn btn-light" id="btn-reset">↺ ล้างค่า</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SETTINGS VIEW ============ -->
+  <div class="view" id="view-settings">
+    <div class="card">
+      <div class="card-head"><h2>📍 สถานีที่ปฏิบัติงาน</h2></div>
+      <div class="card-body">
+        <p class="hint" style="margin-top:0;">เลือกสถานีที่ปฏิบัติงานของคุณ ระบบจะใช้สถานีนี้เป็น "สถานีส่ง" เริ่มต้นให้อัตโนมัติทุกครั้งที่เปิดหน้าคำนวณหรือกดล้างค่า</p>
+        <div class="combo" id="combo-home-station" style="max-width:420px;">
+          <input type="text" id="home-station-search" class="combo-input" placeholder="พิมพ์ชื่อหรือรหัสสถานี..." autocomplete="off">
+          <input type="hidden" id="home-station">
+          <div class="combo-list" id="home-station-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>⚙️ ประเภทวัตถุ &amp; อัตราขั้นต่ำ</h2></div>
+      <div class="card-body">
+        <p class="hint" style="margin-top:0;">ค่าระวางขั้นต่ำ/ค่าธรรมเนียมขั้นต่ำของแต่ละประเภท ปรับได้ตามอัตราจริงของการรถไฟฯ</p>
+        <div class="settings-list" id="itemtype-settings"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>⚖️ ค่าระวางตามน้ำหนัก-ระยะทาง (ของกิน / ของใช้)</h2></div>
+      <div class="card-body">
+        <p class="hint" style="margin-top:0;">
+          น้ำหนักขั้นต่ำที่ใช้คิดคือ <b>20 กก.</b> — น้ำหนักจริง 21–30 กก. คิดเป็น <b>30 กก.</b>, น้ำหนักจริง 31 กก. ขึ้นไป ปัดขึ้นเป็นช่วง 10 กก. ถัดไป (สูงสุด 100 กก.)
+        </p>
+        <p class="hint" style="color:var(--ok);">
+          ✓ ยืนยันสูตรคำนวณแล้ว (ตรวจกับใบนำมอบสินค้าจริง 14 รายการ ตรงเป๊ะทุกรายการ): นำอัตราจากตารางไป <b>ปัดขึ้นเสมอ (ceiling)</b> โดยมี<b>พื้นขั้นต่ำที่ 30</b> จากนั้น <b>คูณ 2 = ค่าระวาง</b> แล้ว <b>ค่าธรรมเนียม = ค่าระวาง ÷ 2</b><br>
+          ตัวอย่าง: อัตราจากตาราง 41.10 → ปัดขึ้นเป็น 42 → ค่าระวาง 84 → ค่าธรรมเนียม 42 → รวม <b>126 บาท</b><br>
+          รถจักรยานยนต์: ค่าระวางคำนวณจากตารางเดียวกัน (น้ำหนักคิดสูงสุด 100 กก.) ยืนยันตรงกับข้อมูลจริงสำหรับรุ่นไม่เกิน 125 ซีซี ส่วนรุ่นใหญ่กว่านั้นยังรอข้อมูลตัวอย่างเพิ่มเพื่อยืนยันตัวคูณ
+        </p>
+        <p class="hint" style="color:var(--ok);">
+          ✓ ตารางอัตราค่าระวางครบทั้ง 9 คอลัมน์น้ำหนัก (20/30/40/50/60/70/80/90/100 กก.) × 114 ช่วงระยะทาง (1–2,000 กม.) ตรงตามตารางต้นฉบับของการรถไฟฯ ทุกตัวเลข
+        </p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>🏍 ค่าธรรมเนียมขนส่งรถจักรยานยนต์ (ตามระยะทาง) และค่าบริการขึ้น-ลง</h2></div>
+      <div class="card-body">
+        <p class="hint" style="margin-top:0;">อัตราตามประกาศการรถไฟฯ มีผลตั้งแต่ 1 ตุลาคม 2565 — แก้ไขตัวเลขได้ตามประกาศฉบับล่าสุด</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>ประเภทรถจักรยานยนต์</th>
+              <th class="num-cell">ค่าธรรมเนียม ≤ 300 กม.</th>
+              <th class="num-cell">ค่าธรรมเนียม 301-600 กม.</th>
+              <th class="num-cell">ค่าธรรมเนียม 601 กม.ขึ้นไป</th>
+              <th class="num-cell">ค่าบริการขึ้น</th>
+              <th class="num-cell">ค่าบริการลง</th>
+            </tr></thead>
+            <tbody id="moto-brackets"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>📍 สถานีทั้งหมด &amp; หลัก ก.ม.</h2>
+        <button class="btn btn-outline btn-sm" id="btn-add-station">+ เพิ่มสถานี</button>
+      </div>
+      <div class="card-body" id="station-settings-wrap">
+        <p class="hint" style="margin-top:0;">ข้อมูลหลัก ก.ม. รวม 687 สถานีทั่วประเทศ จาก "สมุดเลขรหัสแทนชื่อสถานี, ที่หยุดรถ" ฉบับทางการของการรถไฟฯ (ปรับปรุง 2 ก.พ. 2563) — สายเหนือ/อีสาน/ตะวันออก วัดจากสถานีกรุงเทพ, สายใต้วัดจากสถานีธนบุรีแยกต่างหาก, สายแม่กลอง 2 ท่อนที่ไม่เชื่อมกันทางราง — ระบบคำนวณระยะทางข้ามกลุ่มสายเหนือ↔สายใต้ด้วยกฎ "+16 กม." อัตโนมัติ ส่วนแม่กลองต้องกรอกระยะทางเอง</p>
+        <input type="text" id="station-search" placeholder="ค้นหาสถานี (ชื่อหรือรหัส)..." style="margin-bottom:12px;">
+        <div class="settings-list" id="station-settings"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>ระบบนี้เป็นเครื่องมือช่วยคำนวณเบื้องต้น กรุณาตรวจสอบอัตราค่าระวาง/ค่าธรรมเนียมกับประกาศฉบับจริงของการรถไฟแห่งประเทศไทยก่อนใช้งานจริง</footer>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================================================
+   DATA (validated against official documents + real FMIS records)
+   ============================================================ */
+const FREIGHT_RATE_TABLE = [
+  {min:1, max:30, w:{20:1.40,30:2.10,40:2.80,50:3.50,60:4.20,70:4.90,80:5.60,90:6.30,100:7.00}},
+  {min:31, max:35, w:{20:1.60,30:2.50,40:3.30,50:4.10,60:4.90,70:5.70,80:6.60,90:7.40,100:8.20}},
+  {min:36, max:40, w:{20:1.90,30:2.80,40:3.70,50:4.70,60:5.60,70:6.60,80:7.50,90:8.40,100:9.40}},
+  {min:41, max:45, w:{20:2.10,30:3.20,40:4.20,50:5.30,60:6.30,70:7.40,80:8.40,90:9.50,100:10.50}},
+  {min:46, max:50, w:{20:2.30,30:3.50,40:4.70,50:5.90,60:7.00,70:8.20,80:9.40,90:10.50,100:11.70}},
+  {min:51, max:55, w:{20:2.60,30:3.90,40:5.10,50:6.40,60:7.70,70:9.00,80:10.30,90:11.60,100:12.90}},
+  {min:56, max:60, w:{20:2.80,30:4.20,40:5.60,50:7.00,60:8.40,70:9.80,80:11.20,90:12.60,100:14.00}},
+  {min:61, max:65, w:{20:3.00,30:4.60,40:6.10,50:7.60,60:9.10,70:10.60,80:12.20,90:13.70,100:15.20}},
+  {min:66, max:70, w:{20:3.30,30:4.90,40:6.60,50:8.20,60:9.80,70:11.50,80:13.10,90:14.70,100:16.40}},
+  {min:71, max:75, w:{20:3.50,30:5.30,40:7.00,50:8.80,60:10.50,70:12.30,80:14.00,90:15.80,100:17.60}},
+  {min:76, max:80, w:{20:3.70,30:5.60,40:7.50,50:9.40,60:11.20,70:13.10,80:15.00,90:16.80,100:18.70}},
+  {min:81, max:85, w:{20:4.00,30:6.00,40:8.00,50:9.90,60:11.90,70:13.90,80:15.90,90:17.90,100:19.90}},
+  {min:86, max:90, w:{20:4.20,30:6.30,40:8.40,50:10.50,60:12.60,70:14.70,80:16.80,90:19.00,100:21.10}},
+  {min:91, max:95, w:{20:4.40,30:6.70,40:8.90,50:11.10,60:13.30,70:15.60,80:17.80,90:20.00,100:22.20}},
+  {min:96, max:100, w:{20:4.70,30:7.00,40:9.40,50:11.70,60:14.00,70:16.40,80:18.70,90:21.10,100:23.40}},
+  {min:101, max:110, w:{20:5.10,30:7.70,40:10.20,50:12.80,60:15.30,70:17.90,80:20.40,90:23.00,100:25.50}},
+  {min:111, max:120, w:{20:5.50,30:8.30,40:11.00,50:13.80,60:16.60,70:19.30,80:22.10,90:24.90,100:27.60}},
+  {min:121, max:130, w:{20:5.90,30:8.90,40:11.90,50:14.90,60:17.80,70:20.80,80:23.80,90:26.70,100:29.70}},
+  {min:131, max:140, w:{20:6.40,30:9.50,40:12.70,50:15.90,60:19.10,70:22.30,80:25.50,90:28.60,100:31.80}},
+  {min:141, max:150, w:{20:6.80,30:10.20,40:13.60,50:17.00,60:20.40,70:23.80,80:27.10,90:30.50,100:33.90}},
+  {min:151, max:160, w:{20:7.20,30:10.80,40:14.40,50:18.00,60:21.60,70:25.20,80:28.80,90:32.40,100:36.00}},
+  {min:161, max:170, w:{20:7.60,30:11.40,40:15.30,50:19.10,60:22.90,70:26.70,80:30.50,90:34.30,100:38.10}},
+  {min:171, max:180, w:{20:8.00,30:12.10,40:16.10,50:20.10,60:24.10,70:28.20,80:32.20,90:36.20,100:40.20}},
+  {min:181, max:190, w:{20:8.50,30:12.70,40:16.90,50:21.20,60:25.40,70:29.60,80:33.90,90:38.10,100:42.40}},
+  {min:191, max:200, w:{20:8.90,30:13.30,40:17.80,50:22.20,60:26.70,70:31.10,80:35.60,90:40.00,100:44.50}},
+  {min:201, max:210, w:{20:9.30,30:13.90,40:18.50,50:23.20,60:27.80,70:32.40,80:37.10,90:41.70,100:46.30}},
+  {min:211, max:220, w:{20:9.60,30:14.50,40:19.30,50:24.10,60:28.90,70:33.70,80:38.60,90:43.40,100:48.20}},
+  {min:221, max:230, w:{20:10.00,30:15.00,40:20.00,50:25.00,60:30.00,70:35.10,80:40.10,90:45.10,100:50.10}},
+  {min:231, max:240, w:{20:10.40,30:15.60,40:20.80,50:26.00,60:31.20,70:36.40,80:41.60,90:46.80,100:51.90}},
+  {min:241, max:250, w:{20:10.80,30:16.10,40:21.50,50:26.90,60:32.30,70:37.70,80:43.10,90:48.40,100:53.80}},
+  {min:251, max:260, w:{20:11.10,30:16.70,40:22.30,50:27.80,60:33.40,70:39.00,80:44.60,90:50.10,100:55.70}},
+  {min:261, max:270, w:{20:11.50,30:17.30,40:23.00,50:28.80,60:34.50,70:40.30,80:46.10,90:51.80,100:57.60}},
+  {min:271, max:280, w:{20:11.90,30:17.80,40:23.80,50:29.70,60:35.70,70:41.60,80:47.50,90:53.50,100:59.40}},
+  {min:281, max:290, w:{20:12.30,30:18.40,40:24.50,50:30.70,60:36.80,70:42.90,80:49.00,90:55.20,100:61.30}},
+  {min:291, max:300, w:{20:12.60,30:19.00,40:25.30,50:31.60,60:37.90,70:44.20,80:50.50,90:56.90,100:63.20}},
+  {min:301, max:310, w:{20:13.00,30:19.50,40:26.00,50:32.50,60:39.00,70:45.50,80:52.00,90:58.50,100:65.10}},
+  {min:311, max:320, w:{20:13.40,30:20.10,40:26.80,50:33.50,60:40.20,70:46.80,80:53.50,90:60.20,100:66.90}},
+  {min:321, max:330, w:{20:13.80,30:20.60,40:27.50,50:34.40,60:41.30,70:48.20,80:55.00,90:61.90,100:68.80}},
+  {min:331, max:340, w:{20:14.10,30:21.20,40:28.30,50:35.30,60:42.40,70:49.50,80:56.50,90:63.60,100:70.70}},
+  {min:341, max:350, w:{20:14.30,30:21.80,40:29.00,50:36.30,60:43.50,70:50.80,80:58.00,90:65.30,100:72.50}},
+  {min:351, max:360, w:{20:14.90,30:22.30,40:29.80,50:37.20,60:44.60,70:52.10,80:59.50,90:67.00,100:74.40}},
+  {min:361, max:370, w:{20:15.30,30:22.90,40:30.50,50:38.10,60:45.80,70:53.40,80:61.00,90:68.70,100:76.30}},
+  {min:371, max:380, w:{20:15.60,30:23.40,40:31.30,50:39.10,60:46.90,70:54.70,80:62.50,90:70.30,100:78.20}},
+  {min:381, max:390, w:{20:16.00,30:24.00,40:32.00,50:40.00,60:48.00,70:56.00,80:64.00,90:72.00,100:80.00}},
+  {min:391, max:400, w:{20:16.40,30:24.60,40:32.80,50:41.00,60:49.10,70:57.30,80:65.50,90:73.70,100:81.90}},
+  {min:401, max:410, w:{20:16.70,30:25.10,40:33.40,50:41.80,60:50.20,70:58.50,80:66.90,90:75.30,100:83.60}},
+  {min:411, max:420, w:{20:17.10,30:25.60,40:34.10,50:42.70,60:51.20,70:59.70,80:68.30,90:76.80,100:85.30}},
+  {min:421, max:430, w:{20:17.40,30:26.10,40:34.80,50:43.50,60:52.20,70:60.90,80:69.60,90:78.30,100:87.00}},
+  {min:431, max:440, w:{20:17.80,30:26.60,40:35.50,50:44.40,60:53.30,70:62.10,80:71.00,90:79.90,100:88.80}},
+  {min:441, max:450, w:{20:18.10,30:27.10,40:36.20,50:45.20,60:54.30,70:63.30,80:72.40,90:81.40,100:90.50}},
+  {min:451, max:460, w:{20:18.40,30:27.70,40:36.90,50:46.10,60:55.30,70:64.50,80:73.80,90:83.00,100:92.20}},
+  {min:461, max:470, w:{20:18.80,30:28.20,40:37.60,50:47.00,60:56.30,70:65.70,80:75.10,90:84.40,100:93.90}},
+  {min:471, max:480, w:{20:19.10,30:28.70,40:38.30,50:47.80,60:57.40,70:66.90,80:76.50,90:86.10,100:95.60}},
+  {min:481, max:490, w:{20:19.50,30:29.20,40:38.90,50:48.70,60:58.40,70:68.10,80:77.90,90:87.60,100:97.30}},
+  {min:491, max:500, w:{20:19.80,30:29.70,40:39.60,50:49.50,60:59.40,70:69.30,80:79.20,90:89.20,100:99.10}},
+  {min:501, max:520, w:{20:20.50,30:30.70,40:41.00,50:51.20,60:61.50,70:71.70,80:82.00,90:92.20,100:102.50}},
+  {min:521, max:540, w:{20:21.20,30:31.80,40:42.40,50:53.00,60:63.60,70:74.10,80:84.70,90:95.30,100:105.90}},
+  {min:541, max:560, w:{20:21.90,30:32.80,40:43.70,50:54.70,60:65.60,70:76.50,80:87.50,90:98.40,100:109.40}},
+  {min:561, max:580, w:{20:22.60,30:33.80,40:45.10,50:56.40,60:67.70,70:79.00,80:90.20,90:101.50,100:112.80}},
+  {min:581, max:600, w:{20:23.20,30:34.90,40:46.50,50:58.10,60:69.70,70:81.40,80:93.00,90:104.60,100:116.20}},
+  {min:601, max:620, w:{20:23.90,30:35.90,40:47.90,50:59.80,60:71.80,70:83.80,80:95.70,90:107.70,100:119.70}},
+  {min:621, max:640, w:{20:24.60,30:36.90,40:49.20,50:61.50,60:73.90,70:86.20,80:98.50,90:110.80,100:123.10}},
+  {min:641, max:660, w:{20:25.30,30:38.00,40:50.60,50:63.30,60:75.90,70:88.60,80:101.20,90:113.90,100:126.50}},
+  {min:661, max:680, w:{20:26.00,30:39.00,40:52.00,50:65.00,60:78.00,70:91.00,80:104.00,90:117.00,100:129.90}},
+  {min:681, max:700, w:{20:26.70,30:40.00,40:53.40,50:66.70,60:80.00,70:93.40,80:106.70,90:120.00,100:133.40}},
+  {min:701, max:720, w:{20:27.40,30:41.00,40:54.70,50:68.40,60:82.10,70:95.80,80:109.40,90:123.10,100:136.80}},
+  {min:721, max:740, w:{20:28.00,30:42.10,40:56.10,50:70.10,60:84.10,70:98.20,80:112.20,90:126.20,100:140.20}},
+  {min:741, max:760, w:{20:28.70,30:43.10,40:57.50,50:71.80,60:86.20,70:100.60,80:114.90,90:129.30,100:143.70}},
+  {min:761, max:780, w:{20:29.40,30:44.10,40:58.80,50:73.60,60:88.30,70:103.00,80:117.70,90:132.40,100:147.10}},
+  {min:781, max:800, w:{20:30.10,30:45.20,40:60.20,50:75.30,60:90.30,70:105.40,80:120.40,90:135.50,100:150.50}},
+  {min:801, max:820, w:{20:30.80,30:46.20,40:61.60,50:77.00,60:92.40,70:107.80,80:123.20,90:138.60,100:154.00}},
+  {min:821, max:840, w:{20:31.50,30:47.20,40:63.00,50:78.70,60:94.40,70:110.20,80:125.90,90:141.70,100:157.40}},
+  {min:841, max:860, w:{20:32.20,30:48.30,40:64.30,50:80.40,60:96.50,70:112.60,80:128.70,90:144.80,100:160.80}},
+  {min:861, max:880, w:{20:32.90,30:49.30,40:65.70,50:82.10,60:98.60,70:115.00,80:131.40,90:147.80,100:164.30}},
+  {min:881, max:900, w:{20:33.50,30:50.30,40:67.10,50:83.90,60:100.60,70:117.40,80:134.20,90:150.90,100:167.70}},
+  {min:901, max:920, w:{20:34.20,30:51.30,40:68.50,50:85.60,60:102.70,70:119.80,80:136.90,90:154.00,100:171.10}},
+  {min:921, max:940, w:{20:34.90,30:52.40,40:69.80,50:87.30,60:104.70,70:122.20,80:139.70,90:157.10,100:174.60}},
+  {min:941, max:960, w:{20:35.60,30:53.40,40:71.20,50:89.00,60:106.80,70:124.60,80:142.40,90:160.20,100:178.00}},
+  {min:961, max:980, w:{20:36.30,30:54.40,40:72.60,50:90.70,60:108.90,70:127.00,80:145.10,90:163.30,100:181.40}},
+  {min:981, max:1000, w:{20:37.00,30:55.50,40:73.90,50:92.40,60:110.90,70:129.40,80:147.90,90:166.40,100:184.90}},
+  {min:1001, max:1030, w:{20:38.00,30:57.00,40:76.00,50:95.00,60:114.00,70:133.00,80:152.00,90:171.00,100:190.00}},
+  {min:1031, max:1060, w:{20:39.00,30:58.50,40:78.10,50:97.60,60:117.10,70:136.60,80:156.10,90:175.60,100:195.20}},
+  {min:1061, max:1090, w:{20:40.10,30:60.10,40:80.10,50:100.20,60:120.20,70:140.20,80:160.20,90:180.30,100:200.30}},
+  {min:1091, max:1120, w:{20:41.10,30:61.60,40:82.20,50:102.70,60:123.30,70:143.80,80:164.40,90:184.90,100:205.50}},
+  {min:1121, max:1150, w:{20:42.10,30:63.20,40:84.20,50:105.30,60:126.40,70:147.40,80:168.50,90:189.50,100:210.60}},
+  {min:1151, max:1180, w:{20:43.10,30:64.70,40:86.30,50:107.90,60:129.40,70:151.00,80:172.60,90:194.20,100:215.70}},
+  {min:1181, max:1210, w:{20:44.20,30:66.30,40:88.40,50:110.40,60:132.50,70:154.60,80:176.70,90:198.80,100:220.90}},
+  {min:1211, max:1240, w:{20:45.20,30:67.80,40:90.40,50:113.00,60:135.60,70:158.20,80:180.80,90:203.40,100:226.00}},
+  {min:1241, max:1270, w:{20:46.20,30:69.40,40:92.50,50:115.60,60:138.70,70:161.80,80:185.00,90:208.10,100:231.20}},
+  {min:1271, max:1300, w:{20:47.30,30:70.90,40:94.50,50:118.20,60:141.80,70:165.40,80:189.10,90:212.70,100:236.30}},
+  {min:1301, max:1330, w:{20:48.30,30:72.40,40:96.60,50:120.70,60:144.90,70:169.00,80:193.20,90:217.30,100:241.50}},
+  {min:1331, max:1360, w:{20:49.30,30:74.00,40:98.70,50:123.30,60:148.00,70:172.60,80:197.30,90:222.00,100:246.60}},
+  {min:1361, max:1390, w:{20:50.40,30:75.50,40:100.70,50:125.90,60:151.10,70:176.20,80:201.40,90:226.60,100:251.80}},
+  {min:1391, max:1420, w:{20:51.40,30:77.10,40:102.80,50:128.50,60:154.20,70:179.90,80:205.50,90:231.20,100:256.90}},
+  {min:1421, max:1450, w:{20:52.40,30:78.60,40:104.80,50:131.00,60:157.20,70:183.50,80:209.70,90:235.90,100:262.10}},
+  {min:1451, max:1480, w:{20:53.40,30:80.20,40:106.90,50:133.60,60:160.30,70:187.10,80:213.80,90:240.50,100:267.20}},
+  {min:1481, max:1510, w:{20:54.50,30:81.70,40:109.00,50:136.20,60:163.40,70:190.70,80:217.90,90:245.10,100:272.40}},
+  {min:1511, max:1540, w:{20:55.50,30:83.30,40:111.00,50:138.80,60:166.50,70:194.30,80:222.00,90:249.80,100:277.50}},
+  {min:1541, max:1570, w:{20:56.50,30:84.80,40:113.10,50:141.30,60:169.60,70:197.90,80:226.10,90:254.40,100:282.70}},
+  {min:1571, max:1600, w:{20:57.60,30:86.30,40:115.10,50:143.90,60:172.70,70:201.50,80:230.30,90:259.00,100:287.80}},
+  {min:1601, max:1630, w:{20:58.60,30:87.90,40:117.20,50:146.50,60:175.80,70:205.10,80:234.40,90:263.70,100:293.00}},
+  {min:1631, max:1660, w:{20:59.60,30:89.40,40:119.20,50:149.10,60:178.90,70:208.70,80:238.50,90:268.30,100:298.10}},
+  {min:1661, max:1690, w:{20:60.70,30:91.00,40:121.30,50:151.60,60:182.00,70:212.30,80:242.60,90:272.90,100:303.30}},
+  {min:1691, max:1720, w:{20:61.70,30:92.50,40:123.40,50:154.20,60:185.00,70:215.90,80:246.70,90:277.60,100:308.40}},
+  {min:1721, max:1750, w:{20:62.70,30:94.10,40:125.40,50:156.80,60:188.10,70:219.50,80:250.80,90:282.20,100:313.60}},
+  {min:1751, max:1780, w:{20:63.70,30:95.60,40:127.50,50:159.40,60:191.20,70:223.10,80:255.00,90:286.80,100:318.70}},
+  {min:1781, max:1810, w:{20:64.80,30:97.20,40:129.50,50:161.90,60:194.30,70:226.70,80:259.10,90:291.50,100:323.90}},
+  {min:1811, max:1840, w:{20:65.80,30:98.70,40:131.60,50:164.50,60:197.40,70:230.30,80:263.20,90:296.10,100:329.00}},
+  {min:1841, max:1870, w:{20:66.80,30:100.20,40:133.70,50:167.10,60:200.50,70:233.90,80:267.30,90:300.70,100:334.20}},
+  {min:1871, max:1900, w:{20:67.90,30:101.80,40:135.70,50:169.70,60:203.60,70:237.50,80:271.40,90:305.40,100:339.30}},
+  {min:1901, max:1930, w:{20:68.90,30:103.30,40:137.80,50:172.20,60:206.70,70:241.10,80:275.60,90:310.00,100:344.40}},
+  {min:1931, max:1960, w:{20:69.90,30:104.90,40:139.80,50:174.80,60:209.80,70:244.70,80:279.70,90:314.60,100:349.60}},
+  {min:1961, max:1990, w:{20:70.90,30:106.40,40:141.90,50:177.40,60:212.80,70:248.30,80:283.80,90:319.30,100:354.70}},
+  {min:1991, max:2000, w:{20:71.30,30:106.90,40:142.60,50:178.20,60:213.90,70:249.50,80:285.20,90:320.80,100:356.50}},
+];
+
+const DEFAULT_STATIONS = [
+  {code:"1001", name:"กรุงเทพ", km:0, group:"north"},
+  {code:"1002", name:"ยมราช", km:2, group:"north"},
+  {code:"1003", name:"หอประแจจิตรลดา", km:3, group:"north"},
+  {code:"1232", name:"โรงพยาบาลรามาธิบดี", km:3, group:"north"},
+  {code:"1004", name:"สามเสน", km:5, group:"north"},
+  {code:"1006", name:"ประดิพัทธ์", km:6, group:"north"},
+  {code:"1007", name:"ชุมทางบางซื่อ", km:7, group:"north"},
+  {code:"1008", name:"ที่ทำการรับส่งสินค้าพหลโยธิน", km:7, group:"north"},
+  {code:"1009", name:"นิคมรถไฟ กม.11", km:10, group:"north"},
+  {code:"1011", name:"บางเขน", km:13, group:"north"},
+  {code:"1013", name:"ทุ่งสองห้อง", km:15, group:"north"},
+  {code:"1015", name:"หลักสี่", km:18, group:"north"},
+  {code:"1225", name:"การเคหะ กม.19", km:19, group:"north"},
+  {code:"1016", name:"ตลาดใหม่ดอนเมือง", km:22, group:"north"},
+  {code:"1017", name:"ดอนเมือง", km:22, group:"north"},
+  {code:"1233", name:"แกรนด์ คาแนล", km:25, group:"north"},
+  {code:"1019", name:"หลักหก", km:28, group:"north"},
+  {code:"1020", name:"คลองรังสิต", km:28, group:"north"},
+  {code:"1021", name:"รังสิต", km:30, group:"north"},
+  {code:"1223", name:"คลองหนึ่ง", km:34, group:"north"},
+  {code:"1022", name:"เชียงราก", km:37, group:"north"},
+  {code:"1230", name:"มหาวิทยาลัยธรรมศาสตร์ (ศูนย์รังสิต)", km:40, group:"north"},
+  {code:"1023", name:"นวนคร", km:44, group:"north"},
+  {code:"1024", name:"เชียงรากน้อย", km:46, group:"north"},
+  {code:"1026", name:"คลองพุทรา", km:52, group:"north"},
+  {code:"1028", name:"บางปะอิน", km:58, group:"north"},
+  {code:"1029", name:"บ้านโพ", km:63, group:"north"},
+  {code:"1031", name:"อยุธยา", km:71, group:"north"},
+  {code:"1032", name:"บ้านม้า", km:75, group:"north"},
+  {code:"1033", name:"มาบพระจันทร์", km:79, group:"north"},
+  {code:"1034", name:"บ้านดอนกลาง", km:82, group:"north"},
+  {code:"1035", name:"พระแก้ว", km:85, group:"north"},
+  {code:"1036", name:"ชุมทางบ้านภาชี", km:90, group:"north"},
+  {code:"1224", name:"ดอนหญ้านาง", km:94, group:"north"},
+  {code:"1037", name:"หนองวิวัฒน์", km:96, group:"north"},
+  {code:"1038", name:"บ้านปลักแรด", km:99, group:"north"},
+  {code:"1039", name:"ท่าเรือ", km:103, group:"north"},
+  {code:"1041", name:"บ้านหมอ", km:109, group:"north"},
+  {code:"1045", name:"หนองโดน", km:117, group:"north"},
+  {code:"1047", name:"บ้านกลับ", km:122, group:"north"},
+  {code:"1048", name:"บ้านป่าหวาย", km:127, group:"north"},
+  {code:"1050", name:"ลพบุรี", km:133, group:"north"},
+  {code:"1051", name:"ท่าแค", km:138, group:"north"},
+  {code:"1053", name:"โคกกะเทียม", km:144, group:"north"},
+  {code:"1055", name:"หนองเต่า", km:150, group:"north"},
+  {code:"1056", name:"หนองทรายขาว", km:155, group:"north"},
+  {code:"1058", name:"บ้านหมี่", km:161, group:"north"},
+  {code:"1059", name:"ห้วยแก้ว", km:166, group:"north"},
+  {code:"1060", name:"ไผ่ใหญ่", km:170, group:"north"},
+  {code:"1229", name:"โรงเรียนจันเสน", km:173, group:"north"},
+  {code:"1061", name:"จันเสน", km:174, group:"north"},
+  {code:"1062", name:"บ้านกกกว้าว", km:177, group:"north"},
+  {code:"1063", name:"ช่องแค", km:180, group:"north"},
+  {code:"1065", name:"ทะเลหว้า", km:187, group:"north"},
+  {code:"1066", name:"โพนทอง", km:189, group:"north"},
+  {code:"1067", name:"บ้านตาคลี", km:193, group:"north"},
+  {code:"1069", name:"ดงมะกุ", km:199, group:"north"},
+  {code:"1070", name:"หัวหวาย", km:204, group:"north"},
+  {code:"1072", name:"หนองโพ", km:211, group:"north"},
+  {code:"1074", name:"หัวงิ้ว", km:217, group:"north"},
+  {code:"1076", name:"เนินมะกอก", km:225, group:"north"},
+  {code:"1079", name:"เขาทอง", km:235, group:"north"},
+  {code:"1082", name:"นครสวรรค์", km:246, group:"north"},
+  {code:"1083", name:"ปากน้ำโพ", km:251, group:"north"},
+  {code:"1226", name:"บึงบอระเพ็ด", km:257, group:"north"},
+  {code:"1084", name:"ทับกฤช", km:264, group:"north"},
+  {code:"1086", name:"คลองปลากด", km:271, group:"north"},
+  {code:"1088", name:"ชุมแสง", km:280, group:"north"},
+  {code:"1091", name:"วังกร่าง", km:290, group:"north"},
+  {code:"1093", name:"บางมูลนาก", km:297, group:"north"},
+  {code:"1095", name:"หอไกร", km:304, group:"north"},
+  {code:"1097", name:"ดงตะขบ", km:310, group:"north"},
+  {code:"1099", name:"ตะพานหิน", km:319, group:"north"},
+  {code:"1101", name:"ห้วยเกตุ", km:325, group:"north"},
+  {code:"1103", name:"หัวดง", km:333, group:"north"},
+  {code:"1105", name:"วังกรด", km:339, group:"north"},
+  {code:"1107", name:"พิจิตร", km:347, group:"north"},
+  {code:"1109", name:"ท่าฬ่อ", km:354, group:"north"},
+  {code:"1111", name:"บางกระทุ่ม", km:362, group:"north"},
+  {code:"1112", name:"แม่เทียบ", km:366, group:"north"},
+  {code:"1114", name:"บ้านใหม่", km:375, group:"north"},
+  {code:"1116", name:"บึงพระ", km:382, group:"north"},
+  {code:"1118", name:"พิษณุโลก", km:389, group:"north"},
+  {code:"1119", name:"บ้านเต็งหนาม", km:394, group:"north"},
+  {code:"1121", name:"บ้านตูม", km:400, group:"north"},
+  {code:"1122", name:"แควน้อย", km:405, group:"north"},
+  {code:"1125", name:"พรหมพิราม", km:415, group:"north"},
+  {code:"1127", name:"หนองตม", km:423, group:"north"},
+  {code:"1130", name:"บ้านบุ่ง", km:433, group:"north"},
+  {code:"1131", name:"บ้านโคน", km:437, group:"north"},
+  {code:"1134", name:"พิชัย", km:448, group:"north"},
+  {code:"1136", name:"ไร่อ้อย", km:454, group:"north"},
+  {code:"1137", name:"ชุมทางบ้านดารา", km:458, group:"north"},
+  {code:"1144", name:"ท่าสัก", km:462, group:"north"},
+  {code:"1146", name:"ตรอน", km:470, group:"north"},
+  {code:"1148", name:"วังกะพี้", km:477, group:"north"},
+  {code:"1150", name:"อุตรดิตถ์", km:485, group:"north"},
+  {code:"1151", name:"ศิลาอาสน์", km:488, group:"north"},
+  {code:"1152", name:"ท่าเสา", km:489, group:"north"},
+  {code:"1154", name:"บ้านด่าน", km:498, group:"north"},
+  {code:"1157", name:"ปางต้นผึ้ง", km:509, group:"north"},
+  {code:"1159", name:"เขาพลึง", km:517, group:"north"},
+  {code:"1160", name:"ห้วยไร่", km:521, group:"north"},
+  {code:"1161", name:"ไร่เกล็ดดาว", km:525, group:"north"},
+  {code:"1162", name:"แม่พวก", km:528, group:"north"},
+  {code:"1164", name:"เด่นชัย", km:534, group:"north"},
+  {code:"1165", name:"ปากปาน", km:538, group:"north"},
+  {code:"1167", name:"แก่งหลวง", km:547, group:"north"},
+  {code:"1169", name:"ห้วยแม่ต้า", km:554, group:"north"},
+  {code:"1172", name:"บ้านปิน", km:564, group:"north"},
+  {code:"1176", name:"ผาคัน", km:578, group:"north"},
+  {code:"1177", name:"ผาคอ", km:581, group:"north"},
+  {code:"1180", name:"ปางป๋วย", km:591, group:"north"},
+  {code:"1182", name:"แม่จาง", km:600, group:"north"},
+  {code:"1184", name:"แม่เมาะ", km:609, group:"north"},
+  {code:"1185", name:"ห้วยรากไม้", km:615, group:"north"},
+  {code:"1187", name:"ศาลาผาลาด", km:622, group:"north"},
+  {code:"1189", name:"แม่ทะ", km:628, group:"north"},
+  {code:"1192", name:"หนองวัวเฒ่า", km:637, group:"north"},
+  {code:"1193", name:"นครลำปาง", km:642, group:"north"},
+  {code:"1196", name:"ห้างฉัตร", km:655, group:"north"},
+  {code:"1198", name:"ปางม่วง", km:661, group:"north"},
+  {code:"1199", name:"ห้วยเรียน", km:665, group:"north"},
+  {code:"1201", name:"แม่ตานน้อย", km:671, group:"north"},
+  {code:"1204", name:"ขุนตาน", km:683, group:"north"},
+  {code:"1206", name:"ทาชมภู", km:692, group:"north"},
+  {code:"1208", name:"ศาลาแม่ทา", km:701, group:"north"},
+  {code:"1212", name:"หนองหล่ม", km:713, group:"north"},
+  {code:"1216", name:"ลำพูน", km:729, group:"north"},
+  {code:"1218", name:"ป่าเส้า", km:735, group:"north"},
+  {code:"1220", name:"สารภี", km:743, group:"north"},
+  {code:"1222", name:"เชียงใหม่", km:751, group:"north"},
+  {code:"1139", name:"คลองมะพลับ", km:470, group:"north"},
+  {code:"1143", name:"สวรรคโลก", km:487, group:"north"},
+  {code:"2001", name:"หนองกวย", km:95, group:"north"},
+  {code:"2002", name:"หนองแซง", km:98, group:"north"},
+  {code:"2004", name:"หนองสีดา", km:103, group:"north"},
+  {code:"2005", name:"บ้านป๊อกแป๊ก", km:108, group:"north"},
+  {code:"2007", name:"สระบุรี", km:113, group:"north"},
+  {code:"2009", name:"หนองบัว", km:119, group:"north"},
+  {code:"2011", name:"ชุมทางแก่งคอย", km:125, group:"north"},
+  {code:"2081", name:"ทับกวาง", km:131, group:"north"},
+  {code:"2082", name:"มาบกะเบา", km:134, group:"north"},
+  {code:"2083", name:"ผาเสด็จ", km:139, group:"north"},
+  {code:"2084", name:"หินลับ", km:144, group:"north"},
+  {code:"2086", name:"มวกเหล็ก", km:152, group:"north"},
+  {code:"2088", name:"กลางดง", km:160, group:"north"},
+  {code:"2089", name:"ปางอโศก", km:165, group:"north"},
+  {code:"2091", name:"บันไดม้า", km:174, group:"north"},
+  {code:"2093", name:"ปากช่อง", km:180, group:"north"},
+  {code:"2095", name:"ซับม่วง", km:188, group:"north"},
+  {code:"2096", name:"จันทึก", km:196, group:"north"},
+  {code:"2097", name:"คลองขนานจิตร", km:202, group:"north"},
+  {code:"2100", name:"คลองไผ่", km:206, group:"north"},
+  {code:"2101", name:"ลาดบัวขาว", km:209, group:"north"},
+  {code:"2102", name:"บ้านใหม่สำโรง", km:215, group:"north"},
+  {code:"2103", name:"หนองน้ำขุ่น", km:218, group:"north"},
+  {code:"2105", name:"สีคิ้ว", km:224, group:"north"},
+  {code:"2106", name:"โคกสะอาด", km:229, group:"north"},
+  {code:"2107", name:"สูงเนิน", km:234, group:"north"},
+  {code:"2109", name:"กุดจิก", km:241, group:"north"},
+  {code:"2111", name:"โคกกรวด", km:250, group:"north"},
+  {code:"2113", name:"ภูเขาลาด", km:257, group:"north"},
+  {code:"2114", name:"นครราชสีมา", km:264, group:"north"},
+  {code:"2115", name:"ชุมทางถนนจิระ", km:266, group:"north"},
+  {code:"2211", name:"บ้านพะเนา", km:276, group:"north"},
+  {code:"2212", name:"บ้านพระพุทธ", km:280, group:"north"},
+  {code:"2213", name:"ท่าช้าง", km:285, group:"north"},
+  {code:"2215", name:"หนองมโนรมย์", km:293, group:"north"},
+  {code:"2217", name:"จักราช", km:300, group:"north"},
+  {code:"2220", name:"บ้านหินโคน", km:310, group:"north"},
+  {code:"2222", name:"หินดาษ", km:317, group:"north"},
+  {code:"2224", name:"ห้วยแถลง", km:326, group:"north"},
+  {code:"2227", name:"หนองกระทิง", km:338, group:"north"},
+  {code:"2229", name:"ลำปลายมาศ", km:346, group:"north"},
+  {code:"2231", name:"ทะเมนชัย", km:355, group:"north"},
+  {code:"2233", name:"บ้านแสลงพัน", km:363, group:"north"},
+  {code:"2234", name:"บ้านหนองตาด", km:367, group:"north"},
+  {code:"2236", name:"บุรีรัมย์", km:376, group:"north"},
+  {code:"2237", name:"บ้านตะโก", km:380, group:"north"},
+  {code:"2239", name:"ห้วยราช", km:386, group:"north"},
+  {code:"2243", name:"กระสัง", km:399, group:"north"},
+  {code:"2244", name:"หนองเต็ง", km:406, group:"north"},
+  {code:"2246", name:"ลำชี", km:412, group:"north"},
+  {code:"2248", name:"สุรินทร์", km:420, group:"north"},
+  {code:"2250", name:"บุฤาษี", km:429, group:"north"},
+  {code:"2252", name:"เมืองที", km:437, group:"north"},
+  {code:"2254", name:"กะโดนค้อ", km:446, group:"north"},
+  {code:"2256", name:"ศีขรภูมิ", km:452, group:"north"},
+  {code:"2258", name:"บ้านกะลัน", km:460, group:"north"},
+  {code:"2261", name:"สำโรงทาบ", km:471, group:"north"},
+  {code:"2264", name:"ห้วยทับทัน", km:482, group:"north"},
+  {code:"2266", name:"หนองแคน", km:489, group:"north"},
+  {code:"2267", name:"อุทุมพรพิสัย", km:494, group:"north"},
+  {code:"2268", name:"บ้านแต้", km:498, group:"north"},
+  {code:"2270", name:"บ้านเนียม", km:504, group:"north"},
+  {code:"2273", name:"ศรีสะเกษ", km:515, group:"north"},
+  {code:"2275", name:"เฉลิมกาญจนา", km:522, group:"north"},
+  {code:"2277", name:"หนองแวง", km:527, group:"north"},
+  {code:"2279", name:"บ้านคล้อ", km:534, group:"north"},
+  {code:"2281", name:"กันทรารมย์", km:542, group:"north"},
+  {code:"2283", name:"บ้านโนนผึ้ง", km:547, group:"north"},
+  {code:"2285", name:"ห้วยขยุง", km:554, group:"north"},
+  {code:"2286", name:"บ้านถ่อน", km:558, group:"north"},
+  {code:"2288", name:"บุ่งหวาย", km:566, group:"north"},
+  {code:"2290", name:"อุบลราชธานี", km:575, group:"north"},
+  {code:"2117", name:"บ้านเกาะ", km:273, group:"north"},
+  {code:"2119", name:"หนองไข่น้ำ", km:283, group:"north"},
+  {code:"2120", name:"บ้านกระโดน", km:285, group:"north"},
+  {code:"2291", name:"บ้านหนองกันงา", km:288, group:"north"},
+  {code:"2121", name:"หนองแมว", km:290, group:"north"},
+  {code:"2122", name:"โนนสูง", km:295, group:"north"},
+  {code:"2124", name:"บ้านดงพลอง", km:302, group:"north"},
+  {code:"2126", name:"บ้านมะค่า", km:308, group:"north"},
+  {code:"2127", name:"เนินถั่วแปบ", km:311, group:"north"},
+  {code:"2128", name:"พลสงคราม", km:316, group:"north"},
+  {code:"2129", name:"บ้านดอนใหญ่", km:320, group:"north"},
+  {code:"2131", name:"เมืองคง", km:327, group:"north"},
+  {code:"2132", name:"บ้านไร่", km:334, group:"north"},
+  {code:"2133", name:"โนนทองหลาง", km:336, group:"north"},
+  {code:"2135", name:"ห้วยระหัด", km:343, group:"north"},
+  {code:"2136", name:"ชุมทางบัวใหญ่", km:346, group:"north"},
+  {code:"2137", name:"เนินสวัสดิ์", km:351, group:"north"},
+  {code:"2139", name:"หนองบัวลาย", km:357, group:"north"},
+  {code:"2140", name:"ศาลาดิน", km:362, group:"north"},
+  {code:"2142", name:"หนองมะเขือ", km:370, group:"north"},
+  {code:"2144", name:"เมืองพล", km:378, group:"north"},
+  {code:"2149", name:"บ้านหัน", km:397, group:"north"},
+  {code:"2152", name:"บ้านไผ่", km:408, group:"north"},
+  {code:"2156", name:"บ้านแฮด", km:424, group:"north"},
+  {code:"2158", name:"หนองเม็ก", km:432, group:"north"},
+  {code:"2160", name:"ท่าพระ", km:440, group:"north"},
+  {code:"2161", name:"กุดกว้าง", km:444, group:"north"},
+  {code:"2163", name:"ขอนแก่น", km:450, group:"north"},
+  {code:"2166", name:"สำราญ", km:461, group:"north"},
+  {code:"2170", name:"โนนพะยอม", km:475, group:"north"},
+  {code:"2171", name:"บ้านวังชัย", km:480, group:"north"},
+  {code:"2172", name:"น้ำพอง", km:484, group:"north"},
+  {code:"2174", name:"ห้วยเสียว", km:490, group:"north"},
+  {code:"2177", name:"เขาสวนกวาง", km:501, group:"north"},
+  {code:"2181", name:"โนนสะอาด", km:514, group:"north"},
+  {code:"2183", name:"ห้วยเกิ้ง", km:523, group:"north"},
+  {code:"2186", name:"กุมภวาปี", km:533, group:"north"},
+  {code:"2188", name:"ห้วยสามพาด", km:543, group:"north"},
+  {code:"2190", name:"หนองตะไก้", km:551, group:"north"},
+  {code:"2193", name:"คำกลิ้ง", km:562, group:"north"},
+  {code:"2194", name:"หนองขอนกว้าง", km:565, group:"north"},
+  {code:"2195", name:"อุดรธานี", km:569, group:"north"},
+  {code:"2197", name:"หนองตูม", km:576, group:"north"},
+  {code:"2201", name:"นาพู่", km:593, group:"north"},
+  {code:"2202", name:"คอกช้าง", km:598, group:"north"},
+  {code:"2203", name:"หนองบัวเงิน", km:602, group:"north"},
+  {code:"2207", name:"นาทา", km:618, group:"north"},
+  {code:"2209", name:"หนองคาย", km:621, group:"north"},
+  {code:"2305", name:"ตลาดหนองคาย", km:624, group:"north"},
+  {code:"2012", name:"บ้านช่องใต้", km:129, group:"north"},
+  {code:"2013", name:"เขาคอก", km:134, group:"north"},
+  {code:"2015", name:"เขาหินดาด", km:142, group:"north"},
+  {code:"2017", name:"หินซ้อน", km:148, group:"north"},
+  {code:"2018", name:"เขาสูง", km:152, group:"north"},
+  {code:"2020", name:"แก่งเสือเต้น", km:160, group:"north"},
+  {code:"2301", name:"เขื่อนป่าสักชลสิทธิ์", km:162, group:"north"},
+  {code:"2022", name:"บ้านหนองบัว", km:166, group:"north"},
+  {code:"2024", name:"โคกสลุง", km:177, group:"north"},
+  {code:"2026", name:"สุรนารายณ์", km:186, group:"north"},
+  {code:"2028", name:"โรงเรียนอัสสัมชัญคอนแวนต์", km:194, group:"north"},
+  {code:"2030", name:"เขายายกะตา", km:199, group:"north"},
+  {code:"2032", name:"ตลาดลำนารายณ์", km:207, group:"north"},
+  {code:"2033", name:"ลำนารายณ์", km:209, group:"north"},
+  {code:"2036", name:"บ้านเกาะรัง", km:220, group:"north"},
+  {code:"2038", name:"แผ่นดินทอง", km:226, group:"north"},
+  {code:"2041", name:"บ้านจงโก", km:237, group:"north"},
+  {code:"2042", name:"โคกคลี", km:241, group:"north"},
+  {code:"2045", name:"ช่องสำราญ", km:251, group:"north"},
+  {code:"2049", name:"บ้านวะตะแบก (เทพสถิต)", km:263, group:"north"},
+  {code:"2052", name:"ห้วยยายจิ๋ว", km:273, group:"north"},
+  {code:"2054", name:"บ้านปากจาบ", km:280, group:"north"},
+  {code:"2057", name:"บำเหน็จณรงค์", km:291, group:"north"},
+  {code:"2058", name:"บ้านกลอย", km:293, group:"north"},
+  {code:"2059", name:"วังกะอาม", km:297, group:"north"},
+  {code:"2060", name:"โนนคร้อ", km:302, group:"north"},
+  {code:"2062", name:"จัตุรัส", km:310, group:"north"},
+  {code:"2066", name:"หนองฉิม", km:323, group:"north"},
+  {code:"2068", name:"บ้านตาเนิน", km:330, group:"north"},
+  {code:"2069", name:"บ้านหนองขาม", km:334, group:"north"},
+  {code:"2072", name:"บ้านเหลื่อม", km:341, group:"north"},
+  {code:"2073", name:"บ้านโคกกระเบื้อง", km:346, group:"north"},
+  {code:"2075", name:"บ้านหนองปรือโป่ง", km:352, group:"north"},
+  {code:"2076", name:"หนองพลวง", km:355, group:"north"},
+  {code:"2303", name:"บ้านกระพี้", km:358, group:"north"},
+  {code:"2077", name:"บ้านเก่างิ้ว", km:360, group:"north"},
+  {code:"2078", name:"บ้านสระครก", km:362, group:"north"},
+  {code:"2079", name:"บ้านโสกรัง", km:367, group:"north"},
+  {code:"3102", name:"อุรุพงษ์", km:3, group:"north"},
+  {code:"3103", name:"พญาไท", km:4, group:"north"},
+  {code:"3104", name:"ราชปรารภ", km:5, group:"north"},
+  {code:"3001", name:"มักกะสัน", km:5, group:"north"},
+  {code:"3105", name:"อโศก", km:7, group:"north"},
+  {code:"3009", name:"คลองตัน", km:10, group:"north"},
+  {code:"3106", name:"สุขุมวิท 71", km:11, group:"north"},
+  {code:"3010", name:"หัวหมาก", km:15, group:"north"},
+  {code:"3012", name:"บ้านทับช้าง", km:21, group:"north"},
+  {code:"3013", name:"ซอยวัดลานบุญ", km:24, group:"north"},
+  {code:"3014", name:"ลาดกระบัง", km:27, group:"north"},
+  {code:"3107", name:"พระจอมเกล้า", km:30, group:"north"},
+  {code:"3015", name:"หัวตะเข้", km:31, group:"north"},
+  {code:"3016", name:"บรรจุและแยกสินค้ากล่อง(ไอซีดี)ที่ลาดกระบัง", km:34, group:"north"},
+  {code:"3017", name:"คลองหลวงแพ่ง", km:40, group:"north"},
+  {code:"3018", name:"คลองอุดมชลจร", km:43, group:"north"},
+  {code:"3019", name:"คลองเปรง", km:46, group:"north"},
+  {code:"3020", name:"คลองแขวงกลั่น", km:51, group:"north"},
+  {code:"3021", name:"คลองบางพระ", km:54, group:"north"},
+  {code:"3022", name:"บางเตย", km:57, group:"north"},
+  {code:"3023", name:"ชุมทางฉะเชิงเทรา", km:61, group:"north"},
+  {code:"3053", name:"โพรงอากาศ", km:75, group:"north"},
+  {code:"3055", name:"บางน้ำเปรี้ยว", km:79, group:"north"},
+  {code:"3057", name:"ชุมทางคลองสิบเก้า", km:86, group:"north"},
+  {code:"3058", name:"คลองยี่สิบเอ็ด", km:89, group:"north"},
+  {code:"3059", name:"โยทะกา", km:94, group:"north"},
+  {code:"3061", name:"บ้านสร้าง", km:102, group:"north"},
+  {code:"3063", name:"หนองน้ำขาว", km:109, group:"north"},
+  {code:"3064", name:"บ้านปากพลี", km:115, group:"north"},
+  {code:"3066", name:"ปราจีนบุรี", km:122, group:"north"},
+  {code:"3067", name:"หนองกระจับ", km:126, group:"north"},
+  {code:"3068", name:"โคกมะกอก", km:131, group:"north"},
+  {code:"3070", name:"ประจันตคาม", km:138, group:"north"},
+  {code:"3071", name:"หนองแสง", km:143, group:"north"},
+  {code:"3072", name:"บ้านดงบัง", km:147, group:"north"},
+  {code:"3125", name:"หนองศรีวิชัย", km:149, group:"north"},
+  {code:"3073", name:"บ้านพรมแสง", km:152, group:"north"},
+  {code:"3074", name:"บ้านเกาะแดง", km:156, group:"north"},
+  {code:"3075", name:"กบินทร์บุรี", km:161, group:"north"},
+  {code:"3076", name:"กบินทร์เก่า", km:166, group:"north"},
+  {code:"3078", name:"หนองสัง", km:173, group:"north"},
+  {code:"3081", name:"พระปรง", km:184, group:"north"},
+  {code:"3083", name:"บ้านแก้ง", km:190, group:"north"},
+  {code:"3085", name:"ศาลาลำดวน", km:196, group:"north"},
+  {code:"3087", name:"สระแก้ว", km:205, group:"north"},
+  {code:"3129", name:"ศูนย์ราชการจังหวัดสระแก้ว", km:213, group:"north"},
+  {code:"3090", name:"ท่าเกษม", km:216, group:"north"},
+  {code:"3092", name:"ห้วยโจด", km:223, group:"north"},
+  {code:"3094", name:"วัฒนานคร", km:234, group:"north"},
+  {code:"3096", name:"บ้านโป่งคอม", km:240, group:"north"},
+  {code:"3097", name:"ห้วยเดื่อ", km:245, group:"north"},
+  {code:"3100", name:"อรัญประเทศ", km:255, group:"north"},
+  {code:"3101", name:"ไทย", km:259, group:"north"},
+  {code:"3130", name:"ด่านพรมแดนบ้านคลองลึก", km:260, group:"north"},
+  {code:"3118", name:"องครักษ์", km:115, group:"north"},
+  {code:"3120", name:"วิหารแดง", km:138, group:"north"},
+  {code:"3121", name:"บุใหญ่", km:149, group:"north"},
+  {code:"3122", name:"ชุมทางบ้านไผ่นาบุญ", km:163, group:"north"},
+  {code:"3025", name:"แปดริ้ว", km:63, group:"north"},
+  {code:"3026", name:"ดอนสีนนท์", km:76, group:"north"},
+  {code:"3029", name:"พานทอง", km:92, group:"north"},
+  {code:"3032", name:"ชลบุรี", km:108, group:"north"},
+  {code:"3033", name:"แสนสุข", km:114, group:"north"},
+  {code:"3034", name:"บางพระ", km:121, group:"north"},
+  {code:"3035", name:"เขาพระบาท", km:125, group:"north"},
+  {code:"3036", name:"ชุมทางศรีราชา", km:131, group:"north"},
+  {code:"3037", name:"แหลมฉบัง", km:140, group:"north"},
+  {code:"3039", name:"บางละมุง", km:144, group:"north"},
+  {code:"3041", name:"พัทยา", km:155, group:"north"},
+  {code:"3042", name:"พัทยาใต้", km:159, group:"north"},
+  {code:"3124", name:"ตลาดน้ำ 4 ภาค", km:163, group:"north"},
+  {code:"3043", name:"บ้านห้วยขวาง", km:168, group:"north"},
+  {code:"3123", name:"ญาณสังวราราม", km:171, group:"north"},
+  {code:"3044", name:"สวนนงนุช", km:174, group:"north"},
+  {code:"3045", name:"ชุมทางเขาชีจรรย์", km:180, group:"north"},
+  {code:"3047", name:"บ้านพลูตาหลวง", km:184, group:"north"},
+  {code:"3110", name:"บ้านฉาง", km:192, group:"north"},
+  {code:"3115", name:"มาบตาพุด", km:200, group:"north"},
+  {code:"3002", name:"แม่น้ำ", km:10, group:"north"},
+  {code:"3003", name:"ท่าเรือใหม่", km:14, group:"north"},
+  {code:"3004", name:"แม่น้ำ (โรงกลั่นน้ำมันบางจาก)", km:22, group:"north"},
+  {code:"4006", name:"บางซ่อน", km:11, group:"north"},
+  {code:"4005", name:"บางบำหรุ", km:18, group:"north"},
+  {code:"4002", name:"ธนบุรี", km:1, group:"south"},
+  {code:"4434", name:"จรัลสนิทวงศ์", km:2, group:"south"},
+  {code:"4003", name:"บางระมาด", km:4, group:"south"},
+  {code:"4004", name:"ชุมทางตลิ่งชัน", km:6, group:"south"},
+  {code:"4007", name:"บ้านฉิมพลี", km:9, group:"south"},
+  {code:"4442", name:"พุทธมณฑล สาย 2", km:11, group:"south"},
+  {code:"4008", name:"ศาลาธรรมสพน์", km:14, group:"south"},
+  {code:"4009", name:"ศาลายา", km:19, group:"south"},
+  {code:"4010", name:"วัดสุวรรณ", km:23, group:"south"},
+  {code:"4011", name:"คลองมหาสวัสดิ์", km:27, group:"south"},
+  {code:"4012", name:"วัดงิ้วราย", km:31, group:"south"},
+  {code:"4013", name:"นครชัยศรี", km:35, group:"south"},
+  {code:"4014", name:"ท่าแฉลบ", km:40, group:"south"},
+  {code:"4015", name:"ต้นสำโรง", km:45, group:"south"},
+  {code:"4016", name:"นครปฐม", km:48, group:"south"},
+  {code:"4017", name:"พระราชวังสนามจันทร์", km:50, group:"south"},
+  {code:"4018", name:"โพรงมะเดื่อ", km:55, group:"south"},
+  {code:"4019", name:"คลองบางตาล", km:59, group:"south"},
+  {code:"4020", name:"ชุมทางหนองปลาดุก", km:64, group:"south"},
+  {code:"4079", name:"บ้านโป่ง", km:68, group:"south"},
+  {code:"4081", name:"นครชุมน์", km:74, group:"south"},
+  {code:"4082", name:"คลองตาคด", km:77, group:"south"},
+  {code:"4083", name:"โพธาราม", km:82, group:"south"},
+  {code:"4085", name:"เจ็ดเสมียน", km:89, group:"south"},
+  {code:"4087", name:"บ้านกล้วย", km:95, group:"south"},
+  {code:"4088", name:"สะพานจุฬาลงกรณ์", km:100, group:"south"},
+  {code:"4089", name:"ราชบุรี", km:101, group:"south"},
+  {code:"4090", name:"บ้านคูบัว", km:105, group:"south"},
+  {code:"4091", name:"บ่อตะคร้อ", km:111, group:"south"},
+  {code:"4092", name:"บ้านป่าไก่", km:115, group:"south"},
+  {code:"4093", name:"ปากท่อ", km:119, group:"south"},
+  {code:"4094", name:"ห้วยโรง", km:123, group:"south"},
+  {code:"4095", name:"บางเค็ม", km:127, group:"south"},
+  {code:"4097", name:"เขาย้อย", km:134, group:"south"},
+  {code:"4098", name:"หนองปลาไหล", km:139, group:"south"},
+  {code:"4099", name:"บางจาก", km:144, group:"south"},
+  {code:"4101", name:"เพชรบุรี", km:150, group:"south"},
+  {code:"4104", name:"เขาทโมน", km:160, group:"south"},
+  {code:"4105", name:"หนองไม้เหลือง", km:164, group:"south"},
+  {code:"4107", name:"หนองจอก", km:170, group:"south"},
+  {code:"4108", name:"หนองศาลา", km:175, group:"south"},
+  {code:"4111", name:"ชะอำ", km:187, group:"south"},
+  {code:"4114", name:"ห้วยทรายเหนือ", km:198, group:"south"},
+  {code:"4115", name:"ห้วยทรายใต้", km:202, group:"south"},
+  {code:"4118", name:"หัวหิน", km:213, group:"south"},
+  {code:"4119", name:"หนองแก", km:217, group:"south"},
+  {code:"4120", name:"สวนสนประดิพัทธ์", km:221, group:"south"},
+  {code:"4121", name:"เขาเต่า", km:225, group:"south"},
+  {code:"4123", name:"วังก์พง", km:233, group:"south"},
+  {code:"4124", name:"ปราณบุรี", km:236, group:"south"},
+  {code:"4125", name:"ห้วยขวาง", km:242, group:"south"},
+  {code:"4126", name:"หนองคาง", km:247, group:"south"},
+  {code:"4128", name:"สามร้อยยอด", km:255, group:"south"},
+  {code:"4130", name:"สามกระทาย", km:261, group:"south"},
+  {code:"4133", name:"กุยบุรี", km:271, group:"south"},
+  {code:"4135", name:"บ่อนอก", km:279, group:"south"},
+  {code:"4138", name:"ทุ่งมะเม่า", km:289, group:"south"},
+  {code:"4140", name:"คั่นกระได", km:295, group:"south"},
+  {code:"4142", name:"ประจวบคีรีขันธ์", km:302, group:"south"},
+  {code:"4144", name:"หนองหิน", km:310, group:"south"},
+  {code:"4145", name:"หว้ากอ", km:313, group:"south"},
+  {code:"4146", name:"วังด้วน", km:318, group:"south"},
+  {code:"4149", name:"ห้วยยาง", km:329, group:"south"},
+  {code:"4152", name:"ทุ่งประดู่", km:339, group:"south"},
+  {code:"4153", name:"ทับสะแก", km:342, group:"south"},
+  {code:"4154", name:"ดอนทราย", km:347, group:"south"},
+  {code:"4156", name:"โคกตาหอม", km:353, group:"south"},
+  {code:"4158", name:"บ้านกรูด", km:361, group:"south"},
+  {code:"4159", name:"หนองมงคล", km:366, group:"south"},
+  {code:"4161", name:"นาผักขวง", km:371, group:"south"},
+  {code:"4163", name:"บางสะพานใหญ่", km:377, group:"south"},
+  {code:"4164", name:"หินกอง", km:384, group:"south"},
+  {code:"4165", name:"ชะม่วง", km:386, group:"south"},
+  {code:"4167", name:"บางสะพานน้อย", km:393, group:"south"},
+  {code:"4169", name:"ห้วยสัก", km:400, group:"south"},
+  {code:"4170", name:"บ้านทรายทอง", km:404, group:"south"},
+  {code:"4172", name:"เขาไชยราช", km:410, group:"south"},
+  {code:"4175", name:"มาบอำมฤต", km:421, group:"south"},
+  {code:"4177", name:"บ้านทรัพย์สมบูรณ์", km:428, group:"south"},
+  {code:"4178", name:"คลองวังช้าง", km:434, group:"south"},
+  {code:"4179", name:"ปะทิว", km:439, group:"south"},
+  {code:"4181", name:"บ้านคอกม้า", km:447, group:"south"},
+  {code:"4182", name:"สะพลี", km:454, group:"south"},
+  {code:"4183", name:"หนองเนียน", km:458, group:"south"},
+  {code:"4184", name:"นาชะอัง", km:463, group:"south"},
+  {code:"4186", name:"ชุมพร", km:469, group:"south"},
+  {code:"4187", name:"แสงแดด", km:473, group:"south"},
+  {code:"4189", name:"ทุ่งคา", km:481, group:"south"},
+  {code:"4191", name:"วิสัย", km:490, group:"south"},
+  {code:"4192", name:"บ้านครน", km:496, group:"south"},
+  {code:"4194", name:"สวี", km:501, group:"south"},
+  {code:"4196", name:"เขาสวนทุเรียน", km:509, group:"south"},
+  {code:"4197", name:"เขาปีบ", km:512, group:"south"},
+  {code:"4199", name:"ปากตะโก", km:517, group:"south"},
+  {code:"4200", name:"ท่าทอง", km:522, group:"south"},
+  {code:"4201", name:"ควนหินมุ้ย", km:526, group:"south"},
+  {code:"4203", name:"หลังสวน", km:533, group:"south"},
+  {code:"4205", name:"คลองขนาน", km:541, group:"south"},
+  {code:"4206", name:"หัวมาด", km:547, group:"south"},
+  {code:"4208", name:"ละแม", km:554, group:"south"},
+  {code:"4210", name:"บ้านดวด", km:560, group:"south"},
+  {code:"4212", name:"คันธุลี", km:566, group:"south"},
+  {code:"4213", name:"ดอนธูป", km:570, group:"south"},
+  {code:"4215", name:"ท่าชนะ", km:578, group:"south"},
+  {code:"4217", name:"บ้านเกาะมุกข์", km:584, group:"south"},
+  {code:"4218", name:"เขาพนมแบก", km:588, group:"south"},
+  {code:"4221", name:"ไชยา", km:598, group:"south"},
+  {code:"4224", name:"ท่าฉาง", km:611, group:"south"},
+  {code:"4225", name:"คลองขุด", km:614, group:"south"},
+  {code:"4226", name:"คลองไทร", km:619, group:"south"},
+  {code:"4227", name:"มะลวน", km:624, group:"south"},
+  {code:"4229", name:"ชุมทางบ้านทุ่งโพธิ์", km:631, group:"south"},
+  {code:"4239", name:"สุราษฎร์ธานี", km:635, group:"south"},
+  {code:"4241", name:"เขาหัวควาย", km:642, group:"south"},
+  {code:"4243", name:"บ่อกรัง", km:647, group:"south"},
+  {code:"4245", name:"เขาพลู", km:652, group:"south"},
+  {code:"4246", name:"คลองยา", km:658, group:"south"},
+  {code:"4247", name:"บ้านนา", km:662, group:"south"},
+  {code:"4249", name:"ห้วยมุด", km:670, group:"south"},
+  {code:"4250", name:"นาสาร", km:674, group:"south"},
+  {code:"4252", name:"คลองปราบ", km:680, group:"south"},
+  {code:"4253", name:"พรุพี", km:684, group:"south"},
+  {code:"4254", name:"คลองสูญ", km:688, group:"south"},
+  {code:"4255", name:"บ้านส้อง", km:693, group:"south"},
+  {code:"4257", name:"บ้านพรุกระแชง", km:700, group:"south"},
+  {code:"4258", name:"ห้วยปริก", km:705, group:"south"},
+  {code:"4259", name:"กระเบียด", km:710, group:"south"},
+  {code:"4261", name:"ทานพอ", km:717, group:"south"},
+  {code:"4262", name:"ฉวาง", km:722, group:"south"},
+  {code:"4264", name:"คลองจันดี", km:728, group:"south"},
+  {code:"4266", name:"หลักช้าง", km:735, group:"south"},
+  {code:"4267", name:"คลองกุย", km:739, group:"south"},
+  {code:"4268", name:"นาบอน", km:743, group:"south"},
+  {code:"4269", name:"คลองจัง", km:747, group:"south"},
+  {code:"4433", name:"บ้านเกาะปริง", km:751, group:"south"},
+  {code:"4270", name:"ชุมทางทุ่งสง", km:757, group:"south"},
+  {code:"4295", name:"ใสใหญ่", km:762, group:"south"},
+  {code:"4297", name:"ช่องเขา", km:768, group:"south"},
+  {code:"4299", name:"ร่อนพิบูลย์", km:776, group:"south"},
+  {code:"4300", name:"ชุมทางเขาชุมทอง", km:781, group:"south"},
+  {code:"4310", name:"ควนหนองคว้า", km:789, group:"south"},
+  {code:"4312", name:"บ้านตูล", km:795, group:"south"},
+  {code:"4366", name:"บ้านทุ่งค่าย", km:803, group:"south"},
+  {code:"4315", name:"ชะอวด", km:806, group:"south"},
+  {code:"4316", name:"หนองจิก", km:811, group:"south"},
+  {code:"4317", name:"บ้านนางหลง", km:813, group:"south"},
+  {code:"4435", name:"บ้านตรอกแค", km:816, group:"south"},
+  {code:"4318", name:"บ้านขอนหาด", km:819, group:"south"},
+  {code:"4319", name:"แหลมโตนด", km:824, group:"south"},
+  {code:"4320", name:"บ้านสุนทรา", km:828, group:"south"},
+  {code:"4321", name:"ปากคลอง", km:833, group:"south"},
+  {code:"4323", name:"บ้านมะกอกใต้", km:837, group:"south"},
+  {code:"4324", name:"ชัยบุรี", km:840, group:"south"},
+  {code:"4325", name:"พัทลุง", km:846, group:"south"},
+  {code:"4326", name:"นาปรือ", km:849, group:"south"},
+  {code:"4327", name:"บ้านค่ายไทย", km:853, group:"south"},
+  {code:"4328", name:"บ้านต้นโดน", km:856, group:"south"},
+  {code:"4329", name:"บ้านห้วยแตน", km:859, group:"south"},
+  {code:"4330", name:"เขาชัยสน", km:865, group:"south"},
+  {code:"4331", name:"บางแก้ว", km:870, group:"south"},
+  {code:"4333", name:"ควนพระ", km:877, group:"south"},
+  {code:"4334", name:"ควนเคี่ยม", km:881, group:"south"},
+  {code:"4335", name:"หารกง", km:885, group:"south"},
+  {code:"4336", name:"หารเทา", km:889, group:"south"},
+  {code:"4337", name:"วัดควนเผยอ", km:894, group:"south"},
+  {code:"4338", name:"โคกทราย", km:896, group:"south"},
+  {code:"4340", name:"ควนเนียง", km:903, group:"south"},
+  {code:"4342", name:"บ้านเกาะใหญ่", km:910, group:"south"},
+  {code:"4344", name:"บางกล่ำ", km:917, group:"south"},
+  {code:"4345", name:"บ้านดินลาน", km:922, group:"south"},
+  {code:"4347", name:"ชุมทางหาดใหญ่", km:929, group:"south"},
+  {code:"4377", name:"นาม่วง", km:940, group:"south"},
+  {code:"4381", name:"วัดควนมีด", km:954, group:"south"},
+  {code:"4384", name:"จะนะ", km:965, group:"south"},
+  {code:"4386", name:"ท่าแมงลัก", km:972, group:"south"},
+  {code:"4388", name:"เกาะสะบ้า", km:981, group:"south"},
+  {code:"4391", name:"เทพา", km:992, group:"south"},
+  {code:"4393", name:"ตาแปด", km:1000, group:"south"},
+  {code:"4394", name:"บ้านนิคม", km:1003, group:"south"},
+  {code:"4395", name:"ปัตตานี", km:1009, group:"south"},
+  {code:"4397", name:"นาประดู่", km:1017, group:"south"},
+  {code:"4437", name:"วัดช้างให้", km:1020, group:"south"},
+  {code:"4398", name:"ป่าไร่", km:1021, group:"south"},
+  {code:"4399", name:"คลองทราย", km:1026, group:"south"},
+  {code:"4400", name:"ตาเซะ", km:1032, group:"south"},
+  {code:"4401", name:"บ้านยุโป", km:1035, group:"south"},
+  {code:"4402", name:"ยะลา", km:1039, group:"south"},
+  {code:"4405", name:"ไม้แก่น", km:1049, group:"south"},
+  {code:"4406", name:"บ้านปาแต", km:1052, group:"south"},
+  {code:"4408", name:"รามัน", km:1057, group:"south"},
+  {code:"4409", name:"บาลอ", km:1062, group:"south"},
+  {code:"4411", name:"รือเสาะ", km:1071, group:"south"},
+  {code:"4412", name:"บ้านสะโลว์บูกิ๊ตยือแร", km:1076, group:"south"},
+  {code:"4414", name:"ลาโละ", km:1082, group:"south"},
+  {code:"4416", name:"มะรือโบ", km:1089, group:"south"},
+  {code:"4417", name:"กะแด๊ะ", km:1094, group:"south"},
+  {code:"4419", name:"ตันหยงมัส", km:1100, group:"south"},
+  {code:"4421", name:"ป่าไผ่", km:1105, group:"south"},
+  {code:"4423", name:"เจาะไอร้อง", km:1111, group:"south"},
+  {code:"4424", name:"บูกิต", km:1116, group:"south"},
+  {code:"4425", name:"ไอสะเตีย", km:1120, group:"south"},
+  {code:"4427", name:"โต๊ะเด็ง", km:1126, group:"south"},
+  {code:"4428", name:"สุไหงปาดี", km:1130, group:"south"},
+  {code:"4430", name:"โคกสยา", km:1137, group:"south"},
+  {code:"4432", name:"สุไหงโก-ลก", km:1143, group:"south"},
+  {code:"4358", name:"คลองแงะ", km:953, group:"south"},
+  {code:"4373", name:"ปาดังเบซาร์(ไทย)", km:973, group:"south"},
+  {code:"4374", name:"ปาดังเบซาร์", km:974, group:"south"},
+  {code:"4022", name:"ยางประสาท", km:72, group:"south"},
+  {code:"4024", name:"ดอนขุนวิเศษ", km:81, group:"south"},
+  {code:"4025", name:"กำแพงแสน", km:85, group:"south"},
+  {code:"4026", name:"ทุ่งบัว", km:88, group:"south"},
+  {code:"4027", name:"หนองฟัก", km:93, group:"south"},
+  {code:"4028", name:"โรงเรียนการบิน", km:96, group:"south"},
+  {code:"4031", name:"หนองวัลย์เปรียง", km:105, group:"south"},
+  {code:"4033", name:"ศรีสำราญ", km:113, group:"south"},
+  {code:"4035", name:"ดอนสงวน", km:119, group:"south"},
+  {code:"4036", name:"ดอนทอง", km:122, group:"south"},
+  {code:"4037", name:"หนองผักชี", km:126, group:"south"},
+  {code:"4039", name:"บ้านมะขามล้ม", km:131, group:"south"},
+  {code:"4040", name:"สะแกย่างหมู", km:135, group:"south"},
+  {code:"4042", name:"สุพรรณบุรี", km:142, group:"south"},
+  {code:"4043", name:"ถนนทรงพล", km:68, group:"south"},
+  {code:"4044", name:"สระโกสินารายณ์", km:74, group:"south"},
+  {code:"4045", name:"ลูกแก", km:77, group:"south"},
+  {code:"4048", name:"ท่าเรือน้อย", km:90, group:"south"},
+  {code:"4050", name:"บ้านหนองเสือ", km:97, group:"south"},
+  {code:"4052", name:"ทุ่งทอง", km:103, group:"south"},
+  {code:"4055", name:"ปากแพรก", km:114, group:"south"},
+  {code:"4057", name:"กาญจนบุรี", km:117, group:"south"},
+  {code:"4058", name:"สะพานแควใหญ่", km:120, group:"south"},
+  {code:"4059", name:"เขาปูน", km:125, group:"south"},
+  {code:"4061", name:"วังลาน", km:133, group:"south"},
+  {code:"4062", name:"นากาญจน์", km:136, group:"south"},
+  {code:"4063", name:"วังเย็น", km:140, group:"south"},
+  {code:"4064", name:"วังตะเคียน", km:145, group:"south"},
+  {code:"4065", name:"บ้านโป่งเสี้ยว", km:148, group:"south"},
+  {code:"4066", name:"บ้านเก่า", km:152, group:"south"},
+  {code:"4067", name:"ท่าตาเสือ", km:157, group:"south"},
+  {code:"4069", name:"ท่ากิเลน", km:162, group:"south"},
+  {code:"4070", name:"วังสิงห์", km:167, group:"south"},
+  {code:"4071", name:"ลุ่มสุ่ม", km:172, group:"south"},
+  {code:"4072", name:"สะพานถ้ำกระแซ", km:174, group:"south"},
+  {code:"4073", name:"วังโพ", km:178, group:"south"},
+  {code:"4074", name:"เกาะมหามงคล", km:184, group:"south"},
+  {code:"4075", name:"ช่องแคบ", km:185, group:"south"},
+  {code:"4076", name:"วังใหญ่", km:189, group:"south"},
+  {code:"4436", name:"บ้านพุพง", km:191, group:"south"},
+  {code:"4077", name:"น้ำตก", km:194, group:"south"},
+  {code:"4230", name:"บ้านดอนรัก", km:634, group:"south"},
+  {code:"4232", name:"บ้านทุ่งหลวง", km:641, group:"south"},
+  {code:"4233", name:"บ้านขนาย", km:645, group:"south"},
+  {code:"4234", name:"บ้านดอนเรียบ", km:649, group:"south"},
+  {code:"4235", name:"คลองยัน", km:653, group:"south"},
+  {code:"4236", name:"เขาหลุง", km:656, group:"south"},
+  {code:"4237", name:"บ้านยาง", km:658, group:"south"},
+  {code:"4238", name:"คีรีรัฐนิคม", km:662, group:"south"},
+  {code:"4272", name:"ที่วัง", km:766, group:"south"},
+  {code:"4273", name:"บ้านพูน", km:773, group:"south"},
+  {code:"4275", name:"กะปาง", km:776, group:"south"},
+  {code:"4276", name:"ควนเมา", km:781, group:"south"},
+  {code:"4278", name:"คลองมวน", km:789, group:"south"},
+  {code:"4280", name:"ยางยวน", km:795, group:"south"},
+  {code:"4281", name:"ห้วยยอด", km:801, group:"south"},
+  {code:"4285", name:"ลำภูรา", km:815, group:"south"},
+  {code:"4289", name:"ตรัง", km:829, group:"south"},
+  {code:"4290", name:"นาป้อ", km:833, group:"south"},
+  {code:"4291", name:"พรุใหญ่", km:836, group:"south"},
+  {code:"4293", name:"บ้านป่ากอ", km:843, group:"south"},
+  {code:"4294", name:"กันตัง", km:850, group:"south"},
+  {code:"4301", name:"บ้านเกยเชน", km:786, group:"south"},
+  {code:"4302", name:"บ้านทุ่งหล่อ", km:791, group:"south"},
+  {code:"4303", name:"โคกคราม", km:795, group:"south"},
+  {code:"4304", name:"บ้านห้วยยูง", km:799, group:"south"},
+  {code:"4305", name:"บ้านท่าช้าง", km:803, group:"south"},
+  {code:"4306", name:"วังวัว", km:806, group:"south"},
+  {code:"4307", name:"มะม่วงสองต้น", km:811, group:"south"},
+  {code:"4308", name:"นครศรีธรรมราช", km:816, group:"south"},
+  {code:"5001", name:"วงเวียนใหญ่", km:2, group:"maeklong_a"},
+  {code:"5003", name:"ตลาดพลู", km:4, group:"maeklong_a"},
+  {code:"5004", name:"คลองต้นไทร", km:5, group:"maeklong_a"},
+  {code:"5005", name:"จอมทอง", km:6, group:"maeklong_a"},
+  {code:"5007", name:"วัดไทร", km:8, group:"maeklong_a"},
+  {code:"5008", name:"วัดสิงห์", km:9, group:"maeklong_a"},
+  {code:"5009", name:"บางบอน", km:12, group:"maeklong_a"},
+  {code:"5010", name:"การเคหะ", km:14, group:"maeklong_a"},
+  {code:"5011", name:"รางสะแก", km:15, group:"maeklong_a"},
+  {code:"5012", name:"รางโพธิ์", km:16, group:"maeklong_a"},
+  {code:"5013", name:"สามแยก", km:18, group:"maeklong_a"},
+  {code:"5014", name:"พรมแดน", km:19, group:"maeklong_a"},
+  {code:"5034", name:"ทุ่งสีทอง", km:21, group:"maeklong_a"},
+  {code:"5015", name:"บางน้ำจืด", km:22, group:"maeklong_a"},
+  {code:"5016", name:"คอกควาย", km:25, group:"maeklong_a"},
+  {code:"5017", name:"บ้านขอม", km:29, group:"maeklong_a"},
+  {code:"5033", name:"คลองจาก", km:32, group:"maeklong_a"},
+  {code:"5018", name:"มหาชัย", km:33, group:"maeklong_a"},
+  {code:"5019", name:"บ้านแหลม", km:0, group:"maeklong_b"},
+  {code:"5020", name:"ท่าฉลอม", km:1, group:"maeklong_b"},
+  {code:"5021", name:"บ้านชีผ้าขาว", km:4, group:"maeklong_b"},
+  {code:"5035", name:"คลองนกเล็ก", km:6, group:"maeklong_b"},
+  {code:"5022", name:"บางสีคต", km:7, group:"maeklong_b"},
+  {code:"5023", name:"บางกระเจ้า", km:9, group:"maeklong_b"},
+  {code:"5024", name:"บ้านบ่อ", km:12, group:"maeklong_b"},
+  {code:"5025", name:"บางโทรัด", km:13, group:"maeklong_b"},
+  {code:"5026", name:"บ้านกาหลง", km:16, group:"maeklong_b"},
+  {code:"5027", name:"บ้านนาขวาง", km:18, group:"maeklong_b"},
+  {code:"5028", name:"บ้านนาโคก", km:20, group:"maeklong_b"},
+  {code:"5029", name:"เขตเมือง", km:24, group:"maeklong_b"},
+  {code:"5030", name:"ลาดใหญ่", km:28, group:"maeklong_b"},
+  {code:"5031", name:"บางกระบูน", km:30, group:"maeklong_b"},
+  {code:"5032", name:"แม่กลอง", km:34, group:"maeklong_b"},
+];
+
+const DEFAULT_ITEM_TYPES = [
+  {id:"food",    name:"เครื่องบริโภค(ของกิน)",              calcFee:true,  perPiece:false, hasCalc:true, feeByDist:false, freightByDist:true,  minFreight:60,  minFee:30,  maxWeight:100, weightTier:true,  unit:"กิโลกรัม", qtyEditable:true, up:0, down:0},
+  {id:"goods",   name:"เครื่องอุปโภค(ของใช้)",               calcFee:true,  perPiece:false, hasCalc:true, feeByDist:false, freightByDist:true,  minFreight:60,  minFee:30,  maxWeight:100, weightTier:true,  unit:"กิโลกรัม", qtyEditable:true, up:0, down:0},
+  {id:"moto125", name:"รถจักรยานยนต์ ไม่เกิน 125 ซีซี",       calcFee:true,  perPiece:true,  hasCalc:true, feeByDist:true,  freightByDist:false, minFreight:100, minFee:0, maxWeight:100, weightTier:false, unit:"คัน", qtyEditable:false, up:100, down:60, freightFromWeightTable:true,
+    feeBrackets:[{max:300,fee:400},{max:600,fee:600},{max:99999,fee:800}]},
+  {id:"moto299", name:"รถจักรยานยนต์ 125 - 299 ซีซี",         calcFee:true,  perPiece:true,  hasCalc:true, feeByDist:true,  freightByDist:false, minFreight:100, minFee:0, maxWeight:100, weightTier:false, unit:"คัน", qtyEditable:false, up:120, down:80, freightFromWeightTable:true,
+    feeBrackets:[{max:300,fee:500},{max:600,fee:700},{max:99999,fee:900}]},
+  {id:"moto499", name:"รถจักรยานยนต์ 300 - 499 ซีซี",         calcFee:true,  perPiece:true,  hasCalc:true, feeByDist:true,  freightByDist:false, minFreight:100, minFee:0, maxWeight:100, weightTier:false, unit:"คัน", qtyEditable:false, up:140, down:100, freightFromWeightTable:true,
+    feeBrackets:[{max:300,fee:600},{max:600,fee:800},{max:99999,fee:1000}]},
+  {id:"moto649", name:"รถจักรยานยนต์ 500 - 649 ซีซี",         calcFee:true,  perPiece:true,  hasCalc:true, feeByDist:true,  freightByDist:false, minFreight:100, minFee:0, maxWeight:100, weightTier:false, unit:"คัน", qtyEditable:false, up:160, down:120, freightFromWeightTable:true,
+    feeBrackets:[{max:300,fee:700},{max:600,fee:900},{max:99999,fee:1100}]},
+  {id:"moto799", name:"รถจักรยานยนต์ 650 - 799 ซีซี",         calcFee:true,  perPiece:true,  hasCalc:true, feeByDist:true,  freightByDist:false, minFreight:100, minFee:0, maxWeight:100, weightTier:false, unit:"คัน", qtyEditable:false, up:180, down:140, freightFromWeightTable:true,
+    feeBrackets:[{max:300,fee:800},{max:600,fee:1000},{max:99999,fee:1200}]},
+  {id:"moto999", name:"รถจักรยานยนต์ 800 - 999 ซีซี",         calcFee:true,  perPiece:true,  hasCalc:true, feeByDist:true,  freightByDist:false, minFreight:100, minFee:0, maxWeight:100, weightTier:false, unit:"คัน", qtyEditable:false, up:200, down:160, freightFromWeightTable:true,
+    feeBrackets:[{max:300,fee:900},{max:600,fee:1100},{max:99999,fee:1300}]},
+  {id:"moto1000",name:"รถจักรยานยนต์ 1,000 ซีซี ขึ้นไป",     calcFee:true,  perPiece:true,  hasCalc:true, feeByDist:true,  freightByDist:false, minFreight:100, minFee:0, maxWeight:100, weightTier:false, unit:"คัน", qtyEditable:false, up:220, down:180, freightFromWeightTable:true,
+    feeBrackets:[{max:300,fee:1000},{max:600,fee:1200},{max:99999,fee:1400}]},
+  {id:"sp10050", name:"อัตราพิเศษ100/50",          calcFee:true,  perPiece:false, hasCalc:true, feeByDist:false, freightByDist:true,  minFreight:100, minFee:50,  maxWeight:100, weightTier:true, unit:"กิโลกรัม", qtyEditable:true, up:0, down:0},
+  {id:"sp15075", name:"อัตราพิเศษ150/75",          calcFee:true,  perPiece:false, hasCalc:true, feeByDist:false, freightByDist:true,  minFreight:150, minFee:75, maxWeight:100, weightTier:true, unit:"กิโลกรัม", qtyEditable:true, up:0, down:0},
+  {id:"appliance", name:"เครื่องใช้ไฟฟ้าทุกชนิด",    calcFee:true,  perPiece:false, hasCalc:true, feeByDist:false, freightByDist:true,  minFreight:100, minFee:50,  maxWeight:100, weightTier:true, unit:"กิโลกรัม", qtyEditable:true, up:0, down:0},
+  {id:"parts", name:"อุปกรณ์อะไหล่",                calcFee:true,  perPiece:false, hasCalc:true, feeByDist:false, freightByDist:true,  minFreight:100, minFee:50,  maxWeight:100, weightTier:true, unit:"กิโลกรัม", qtyEditable:true, up:0, down:0},
+  {id:"srt",     name:"SRT One Price (srt)",                  calcFee:false, perPiece:true,  hasCalc:false,feeByDist:false, freightByDist:false, minFreight:70,  minFee:0,   maxWeight:2,   weightTier:false, unit:"ชิ้น", qtyEditable:false, up:0, down:0},
+];
+
+const DEFAULT_SETTINGS = {
+  itemTypes: DEFAULT_ITEM_TYPES,
+  stations: DEFAULT_STATIONS,
+  homeStation: "4419", // ตันหยงมัส
+};
+
+let settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
+
+/* ============================================================
+   STORAGE
+   ============================================================ */
+async function loadSettings(){
+  try{
+    const res = await window.storage.get("srt-settings", false);
+    if(res && res.value){
+      const parsed = JSON.parse(res.value);
+      settings = Object.assign({}, DEFAULT_SETTINGS, parsed);
+      const needsTypeMigration = !Array.isArray(settings.itemTypes) ||
+        !settings.itemTypes.some(t=>t.freightFromWeightTable) ||
+        !settings.itemTypes.some(t=>t.id==="appliance" && t.minFreight===100) ||
+        !settings.itemTypes.some(t=>t.id==="parts") ||
+        !settings.itemTypes.some(t=>t.id==="sp10050" && t.weightTier===true);
+      if(needsTypeMigration){ settings.itemTypes = JSON.parse(JSON.stringify(DEFAULT_ITEM_TYPES)); }
+      const needsStationMigration = !Array.isArray(settings.stations) || settings.stations.length < 600 ||
+        typeof settings.stations[0].km !== "number" || !settings.stations[0].group ||
+        !settings.stations.some(s=>s.group==="south");
+      if(needsStationMigration){ settings.stations = JSON.parse(JSON.stringify(DEFAULT_STATIONS)); }
+      if(needsTypeMigration || needsStationMigration){ await saveSettings(); }
+    }
+  }catch(e){ /* no settings yet, use defaults */ }
+}
+async function saveSettings(){
+  try{ await window.storage.set("srt-settings", JSON.stringify(settings), false); }
+  catch(e){ console.error("save settings failed", e); }
+}
+
+/* ============================================================
+   UTILS
+   ============================================================ */
+function baht(n){ return (Math.round((n||0)*100)/100).toLocaleString("th-TH",{minimumFractionDigits:2, maximumFractionDigits:2}); }
+function bahtFull(n){ return baht(n) + " บาท"; }
+function num(v){ const n = parseFloat(v); return isNaN(n) ? 0 : n; }
+function tierWeight(w){
+  if(w<=0) return 0;
+  if(w<=20) return 20;
+  return Math.ceil(w/10)*10;
+}
+function findType(id){ return settings.itemTypes.find(t=>t.id===id); }
+
+/* ============================================================
+   CALCULATION ENGINE
+   ============================================================ */
+function feeFromBrackets(brackets, distance){
+  if(!Array.isArray(brackets) || !brackets.length) return 0;
+  const b = brackets.find(b=>distance<=b.max) || brackets[brackets.length-1];
+  return b ? b.fee : 0;
+}
+function getFreightRow(distance){
+  const d = Math.max(1, Math.round(distance||1));
+  let row = FREIGHT_RATE_TABLE.find(r=>d>=r.min && d<=r.max);
+  if(!row) row = d < FREIGHT_RATE_TABLE[0].min ? FREIGHT_RATE_TABLE[0] : FREIGHT_RATE_TABLE[FREIGHT_RATE_TABLE.length-1];
+  return row;
+}
+function freightFromOfficialTable(distance, calcWeight){
+  // Weight is tiered (ceiling to nearest 10, floor 20) before lookup.
+  // For tiers beyond 100kg (e.g. heavier motorcycles), extrapolate linearly using the
+  // per-kg rate implied by this row's own 20kg→100kg span — validated exactly against
+  // real motorcycle freight at 120/130/180kg.
+  const row = getFreightRow(distance);
+  const w = Math.max(20, calcWeight);
+  if(w <= 100) return {value: row.w[w]};
+  const ratePerKg = (row.w[100] - row.w[20]) / 80;
+  return {value: row.w[100] + (w - 100) * ratePerKg};
+}
+function computeItem(type, weight, distance){
+  let calcWeight = 0, freight = 0, fee = 0, tableValue = null, roundedTable = null;
+  if(type.weightTier){
+    calcWeight = tierWeight(weight);
+    if(weight <= 0){
+      calcWeight = 0; freight = 0; fee = 0;
+    } else {
+      const result = freightFromOfficialTable(distance||0, calcWeight);
+      tableValue = result.value;
+      roundedTable = Math.max(type.minFee, Math.ceil(tableValue));
+      freight = roundedTable * 2;
+      fee = type.calcFee ? roundedTable : 0;
+    }
+  } else if(type.freightFromWeightTable){
+    calcWeight = tierWeight(weight);
+    const result = weight>0 ? freightFromOfficialTable(distance||0, calcWeight) : {value:0};
+    tableValue = result.value;
+    roundedTable = weight>0 ? Math.max(30, Math.ceil(tableValue)) : 0;
+    freight = roundedTable * 2;
+    fee = type.feeByDist ? feeFromBrackets(type.feeBrackets, distance||0) : (type.calcFee ? type.minFee : 0);
+  } else {
+    calcWeight = Math.min(weight, type.maxWeight || weight);
+    freight = type.minFreight;
+    fee = type.feeByDist ? feeFromBrackets(type.feeBrackets, distance||0) : (type.calcFee ? type.minFee : 0);
+  }
+  return {calcWeight, freight, fee, tableValue, roundedTable};
+}
+
+/* ============================================================
+   ROUTE / STATIONS
+   ============================================================ */
+const DEFAULT_ORIGIN_CODE = "4419"; // ตันหยงมัส
+const groupLabel = {north:"", south:" · สายใต้", maeklong_a:" · แม่กลอง(วงเวียนใหญ่)", maeklong_b:" · แม่กลอง(บ้านแหลม)"};
+
+const comboSelectHandlers = {};
+
+function stationLabel(s){ return `${s.code} - ${s.name} (กม.${s.km})${groupLabel[s.group]||""}`; }
+
+function setStationValue(prefix, code){
+  const hidden = document.getElementById(prefix);
+  const search = document.getElementById(prefix+"-search");
+  const st = settings.stations.find(s=>s.code===code);
+  hidden.value = code || "";
+  hidden.dataset.label = st ? stationLabel(st) : "";
+  search.value = st ? stationLabel(st) : "";
+  hideComboList(prefix);
+  updateDistanceFromStations();
+}
+comboSelectHandlers["rt-from"] = setStationValue;
+comboSelectHandlers["rt-to"] = setStationValue;
+
+async function selectHomeStation(prefix, code){
+  const hidden = document.getElementById("home-station");
+  const search = document.getElementById("home-station-search");
+  const st = settings.stations.find(s=>s.code===code);
+  hidden.value = code || "";
+  search.value = st ? stationLabel(st) : "";
+  hideComboList("home-station");
+  settings.homeStation = code;
+  await saveSettings();
+  setStationValue("rt-from", code); // sync as the calculator's default origin
+}
+comboSelectHandlers["home-station"] = selectHomeStation;
+
+let openComboPrefix = null;
+
+function renderComboList(prefix, query){
+  const list = document.getElementById(prefix+"-list");
+  const q = (query||"").trim().toLowerCase();
+  const sorted = [...settings.stations].sort((a,b)=> a.km - b.km);
+  const filtered = q ? sorted.filter(s=> s.name.toLowerCase().includes(q) || s.code.includes(q)) : sorted;
+  const shown = filtered.slice(0, 80);
+  if(shown.length===0){
+    list.innerHTML = '<div class="combo-empty">ไม่พบสถานีที่ตรงกับคำค้นหา</div>';
+  } else {
+    list.innerHTML = shown.map(s=>`
+      <div class="combo-item" data-code="${s.code}">
+        <span class="cname">${s.code} - ${s.name}${groupLabel[s.group]||""}</span>
+        <span class="ckm">กม.${s.km}</span>
+      </div>
+    `).join("") + (filtered.length>80 ? `<div class="combo-empty">พบ ${filtered.length} สถานี — พิมพ์ให้เจาะจงขึ้นเพื่อดูรายการอื่น</div>` : "");
+  }
+  list.querySelectorAll(".combo-item").forEach(el=>{
+    el.addEventListener("click", ()=>{ (comboSelectHandlers[prefix]||setStationValue)(prefix, el.dataset.code); });
+  });
+  showComboList(prefix);
+}
+function showComboList(prefix){
+  // close any other open combo first
+  if(openComboPrefix && openComboPrefix !== prefix) hideComboList(openComboPrefix);
+  document.getElementById(prefix+"-list").classList.add("show");
+  openComboPrefix = prefix;
+}
+function hideComboList(prefix){
+  document.getElementById(prefix+"-list").classList.remove("show");
+  if(openComboPrefix === prefix) openComboPrefix = null;
+}
+// Close the open dropdown when tapping/clicking anywhere outside it (works for mouse and touch)
+document.addEventListener("click", (e)=>{
+  if(!openComboPrefix) return;
+  const comboEl = document.getElementById("combo-"+openComboPrefix);
+  if(comboEl && !comboEl.contains(e.target)) hideComboList(openComboPrefix);
+});
+
+function setupCombo(prefix){
+  const search = document.getElementById(prefix+"-search");
+  search.addEventListener("focus", ()=>{
+    search.select(); // let typing immediately replace the existing "code - name" label
+    renderComboList(prefix, "");
+  });
+  search.addEventListener("input", ()=> renderComboList(prefix, search.value));
+}
+setupCombo("rt-from");
+setupCombo("rt-to");
+setupCombo("home-station");
+
+function populateStationSelect(){
+  const originDefault = settings.homeStation || DEFAULT_ORIGIN_CODE;
+  const fromCur = document.getElementById("rt-from").value || originDefault;
+  const toCur = document.getElementById("rt-to").value;
+  setStationValue("rt-from", fromCur);
+  if(toCur) setStationValue("rt-to", toCur);
+  const homeSt = settings.stations.find(s=>s.code===originDefault);
+  if(homeSt){
+    document.getElementById("home-station").value = originDefault;
+    document.getElementById("home-station-search").value = stationLabel(homeSt);
+  }
+}
+function getBridgeOffset(groupA, groupB){
+  const NORTH_SOUTH_OFFSET = 16;
+  if(groupA===groupB) return 0;
+  if(groupA==="south" && groupB==="north") return -NORTH_SOUTH_OFFSET;
+  if(groupA==="north" && groupB==="south") return NORTH_SOUTH_OFFSET;
+  return null;
+}
+function updateDistanceFromStations(){
+  const fromCode = document.getElementById("rt-from").value;
+  const toCode = document.getElementById("rt-to").value;
+  const fromSt = settings.stations.find(s=>s.code===fromCode);
+  const toSt = settings.stations.find(s=>s.code===toCode);
+  const hint = document.getElementById("rt-km-hint");
+  const distEl = document.getElementById("rt-dist-val");
+  hint.classList.remove("warn");
+  if(fromSt && toSt){
+    if(fromSt.group === toSt.group){
+      const dist = Math.abs(toSt.km - fromSt.km);
+      document.getElementById("rt-dist").value = dist;
+      distEl.textContent = dist.toLocaleString("th-TH");
+      hint.textContent = `${fromSt.name} (กม.${fromSt.km}) → ${toSt.name} (กม.${toSt.km})`;
+    } else {
+      const offset = getBridgeOffset(fromSt.group, toSt.group);
+      if(offset !== null){
+        const dist = Math.abs(toSt.km + offset - fromSt.km);
+        document.getElementById("rt-dist").value = dist;
+        distEl.textContent = dist.toLocaleString("th-TH");
+        hint.textContent = `สายใต้↔สายเหนือ/อีสาน/ตะวันออก (บวก 16 กม.)`;
+      } else {
+        distEl.textContent = "—";
+        hint.textContent = "⚠ สองสถานีนี้อยู่คนละสายที่ไม่มีทางเชื่อมต่อทางราง — กรุณากรอกระยะทางเอง";
+        hint.classList.add("warn");
+      }
+    }
+  } else {
+    distEl.textContent = "—";
+    hint.textContent = "เลือกสถานีทั้งสองฝั่งเพื่อคำนวณระยะทางอัตโนมัติ";
+  }
+  renderAllCards();
+}
+
+/* ============================================================
+   RATE CARDS (live, no add-button flow)
+   ============================================================ */
+const CARD_DEFS = [
+  {key:"food", icon:"🍱", title:"เครื่องบริโภค (ของกิน)", sub:"คิดตามน้ำหนัก+ระยะทาง", typeId:"food", kind:"weight"},
+  {key:"goods", icon:"🧴", title:"เครื่องอุปโภค (ของใช้)", sub:"คิดตามน้ำหนัก+ระยะทาง", typeId:"goods", kind:"weight"},
+  {key:"appliance", icon:"🔌", title:"เครื่องใช้ไฟฟ้าทุกชนิด", sub:"คิดตามน้ำหนัก+ระยะทาง", typeId:"appliance", kind:"weight"},
+  {key:"parts", icon:"🔧", title:"อุปกรณ์อะไหล่", sub:"คิดตามน้ำหนัก+ระยะทาง", typeId:"parts", kind:"weight"},
+  {key:"moto", icon:"🏍", title:"รถจักรยานยนต์", sub:"เลือกขนาดเครื่องยนต์ + น้ำหนักรถ", kind:"weightchoice",
+    options:[
+      {id:"moto125", label:"ไม่เกิน 125 ซีซี"},
+      {id:"moto299", label:"125 - 299 ซีซี"},
+      {id:"moto499", label:"300 - 499 ซีซี"},
+      {id:"moto649", label:"500 - 649 ซีซี"},
+      {id:"moto799", label:"650 - 799 ซีซี"},
+      {id:"moto999", label:"800 - 999 ซีซี"},
+      {id:"moto1000", label:"1,000 ซีซี ขึ้นไป"},
+    ], weightPlaceholder:"น้ำหนักรถ"},
+  {key:"special", icon:"🏷", title:"อัตราพิเศษ", sub:"เลือกอัตรา + น้ำหนัก", kind:"weightchoice",
+    options:[
+      {id:"sp10050", label:"อัตราพิเศษ 100/50"},
+      {id:"sp15075", label:"อัตราพิเศษ 150/75"},
+    ], weightPlaceholder:"น้ำหนัก"},
+  {key:"srt", icon:"📮", title:"SRT One Price", sub:"ราคาเดียวทั่วประเทศ (สูงสุด 2 กก.)", typeId:"srt", kind:"weight"},
+];
+
+const cardState = {
+  food:{weight:0},
+  goods:{weight:0},
+  appliance:{weight:0},
+  parts:{weight:0},
+  moto:{optionId:"moto125", weight:0},
+  special:{optionId:"sp10050", weight:0},
+  srt:{weight:0},
+};
+
+function rateCardHtml(def){
+  const head = `
+    <div class="rate-card-head">
+      <div class="rate-icon">${def.icon}</div>
+      <div><div class="rate-name">${def.title}</div><div class="rate-sub">${def.sub}</div></div>
+    </div>`;
+  const result = `
+    <div class="rate-result">
+      <div><div class="rr-label">ค่าระวาง</div><div class="rr-val" id="rf-${def.key}">0.00</div></div>
+      <div><div class="rr-label">ค่าธรรมเนียม</div><div class="rr-val" id="rff-${def.key}">0.00</div></div>
+      <div class="rr-total"><div class="rr-label">รวม</div><div class="rr-val" id="rt-${def.key}">0.00 บาท</div></div>
+    </div>`;
+  if(def.kind==="weight"){
+    return `<div class="rate-card" id="card-${def.key}">${head}
+      <div class="weight-row">
+        <input type="number" min="0" step="0.1" class="weight-input" id="w-${def.key}" placeholder="น้ำหนัก">
+        <span class="weight-unit">กิโลกรัม</span>
+      </div>${result}</div>`;
+  }
+  if(def.kind==="weightchoice"){
+    return `<div class="rate-card" id="card-${def.key}">${head}
+      <select class="rate-select" id="sel-${def.key}">
+        ${def.options.map(o=>`<option value="${o.id}">${o.label}</option>`).join("")}
+      </select>
+      <div class="weight-row">
+        <input type="number" min="0" step="0.1" class="weight-input" id="w-${def.key}" placeholder="${def.weightPlaceholder}">
+        <span class="weight-unit">กิโลกรัม</span>
+      </div>${result}</div>`;
+  }
+}
+
+function renderRateGrid(){
+  const grid = document.getElementById("rate-grid");
+  grid.innerHTML = CARD_DEFS.map(rateCardHtml).join("");
+
+  // wire events
+  CARD_DEFS.forEach(def=>{
+    const wInput = document.getElementById(`w-${def.key}`);
+    if(wInput) wInput.addEventListener("input", e=>{ cardState[def.key].weight = num(e.target.value); renderAllCards(); });
+    const selInput = document.getElementById(`sel-${def.key}`);
+    if(selInput) selInput.addEventListener("change", e=>{ cardState[def.key].optionId = e.target.value; renderAllCards(); });
+  });
+}
+
+function renderAllCards(){
+  const distance = num(document.getElementById("rt-dist").value);
+  let sumFreight=0, sumFee=0, sumTotal=0;
+
+  function paint(key, freight, fee, active){
+    document.getElementById(`rf-${key}`).textContent = baht(freight);
+    document.getElementById(`rff-${key}`).textContent = baht(fee);
+    document.getElementById(`rt-${key}`).textContent = bahtFull(freight+fee);
+    const cardEl = document.getElementById(`card-${key}`);
+    if(active){ cardEl.classList.add("active"); sumFreight+=freight; sumFee+=fee; sumTotal+=freight+fee; }
+    else { cardEl.classList.remove("active"); }
+  }
+
+  CARD_DEFS.forEach(def=>{
+    try{
+      if(def.kind==="weight"){
+        const type = findType(def.typeId);
+        if(!type){ console.warn("missing item type:", def.typeId); paint(def.key, 0, 0, false); return; }
+        const r = computeItem(type, cardState[def.key].weight, distance);
+        paint(def.key, r.freight, r.fee, cardState[def.key].weight>0);
+      } else if(def.kind==="weightchoice"){
+        const type = findType(cardState[def.key].optionId);
+        if(!type){ console.warn("missing item type:", cardState[def.key].optionId); paint(def.key, 0, 0, false); return; }
+        const r = computeItem(type, cardState[def.key].weight, distance);
+        paint(def.key, r.freight, r.fee, cardState[def.key].weight>0);
+      }
+    } catch(err){
+      console.error("card render error for", def.key, err);
+      paint(def.key, 0, 0, false);
+    }
+  });
+
+  document.getElementById("sb-freight").textContent = baht(sumFreight);
+  document.getElementById("sb-fee").textContent = baht(sumFee);
+  document.getElementById("sb-total").textContent = bahtFull(sumTotal);
+}
+
+document.getElementById("btn-reset").addEventListener("click", ()=>{
+  CARD_DEFS.forEach(def=>{
+    cardState[def.key].weight = 0;
+    const wInput = document.getElementById(`w-${def.key}`);
+    if(wInput) wInput.value = "";
+    if(def.kind==="weightchoice"){
+      cardState[def.key].optionId = def.options[0].id;
+      const selInput = document.getElementById(`sel-${def.key}`);
+      if(selInput) selInput.value = def.options[0].id;
+    }
+  });
+  setStationValue("rt-from", settings.homeStation || DEFAULT_ORIGIN_CODE);
+  setStationValue("rt-to", "");
+  renderAllCards();
+});
+document.getElementById("btn-print").addEventListener("click", ()=>window.print());
+
+/* ============================================================
+   TABS
+   ============================================================ */
+document.querySelectorAll(".tab-btn").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
+    btn.classList.add("active");
+    const view = btn.dataset.view;
+    document.getElementById("view-"+view).classList.add("active");
+    if(view==="settings") renderSettings();
+  });
+});
+
+/* ============================================================
+   SETTINGS VIEW
+   ============================================================ */
+function renderSettings(){
+  const itContainer = document.getElementById("itemtype-settings");
+  itContainer.innerHTML = `
+    <div class="settings-row head"><div>ประเภทวัตถุ</div><div>ค่าระวางขั้นต่ำ</div><div>ค่าธรรมเนียมขั้นต่ำ</div><div>น้ำหนักสูงสุด (กก.)</div><div></div></div>
+  ` + settings.itemTypes.map((t,i)=>`
+    <div class="settings-row">
+      <div>${t.name}</div>
+      <div><input type="number" step="0.01" value="${t.minFreight}" onchange="SRT.setType(${i},'minFreight',this.value)"></div>
+      <div>${t.feeByDist
+          ? `<input type="text" value="ดูตารางค่าธรรมเนียมด้านล่าง" disabled>`
+          : `<input type="number" step="0.01" value="${t.minFee}" onchange="SRT.setType(${i},'minFee',this.value)">`}</div>
+      <div><input type="number" step="0.01" value="${t.maxWeight||0}" onchange="SRT.setType(${i},'maxWeight',this.value)"></div>
+      <div></div>
+    </div>
+  `).join("");
+
+  const motoContainer = document.getElementById("moto-brackets");
+  motoContainer.innerHTML = settings.itemTypes.map((t,i)=>{
+    if(!t.feeByDist || !Array.isArray(t.feeBrackets)) return "";
+    return `
+      <tr>
+        <td>${t.name}</td>
+        <td class="num-cell"><input type="number" step="1" style="width:90px; text-align:right;" value="${t.feeBrackets[0].fee}" onchange="SRT.setMotoFee(${i},0,this.value)"></td>
+        <td class="num-cell"><input type="number" step="1" style="width:90px; text-align:right;" value="${t.feeBrackets[1].fee}" onchange="SRT.setMotoFee(${i},1,this.value)"></td>
+        <td class="num-cell"><input type="number" step="1" style="width:90px; text-align:right;" value="${t.feeBrackets[2].fee}" onchange="SRT.setMotoFee(${i},2,this.value)"></td>
+        <td class="num-cell"><input type="number" step="1" style="width:80px; text-align:right;" value="${t.up}" onchange="SRT.setTypeUpDown(${i},'up',this.value)"></td>
+        <td class="num-cell"><input type="number" step="1" style="width:80px; text-align:right;" value="${t.down}" onchange="SRT.setTypeUpDown(${i},'down',this.value)"></td>
+      </tr>`;
+  }).join("");
+
+  renderStationTableOnly();
+}
+document.getElementById("station-search").addEventListener("input", renderStationTableOnly);
+function renderStationTableOnly(){
+  const q = (document.getElementById("station-search").value || "").trim().toLowerCase();
+  const filtered = settings.stations.filter(s=> !q || s.name.toLowerCase().includes(q) || s.code.includes(q));
+  const shown = filtered.slice(0, 60);
+  const gLabel = {north:"เหนือ/อีสาน/ตะวันออก (จาก กท.)", south:"สายใต้ (จาก ธบ.)", maeklong_a:"แม่กลอง (วงเวียนใหญ่)", maeklong_b:"แม่กลอง (บ้านแหลม)"};
+  const stContainer = document.getElementById("station-settings");
+  stContainer.innerHTML = `
+    <div class="settings-row head" style="grid-template-columns:1fr 1.6fr .8fr 1fr auto;"><div>รหัสสถานี</div><div>ชื่อสถานี</div><div>หลัก ก.ม.</div><div>กลุ่มอ้างอิง</div><div></div></div>
+  ` + shown.map((s)=>{
+    const i = settings.stations.indexOf(s);
+    return `
+    <div class="settings-row" style="grid-template-columns:1fr 1.6fr .8fr 1fr auto;">
+      <div><input type="text" value="${s.code}" onchange="SRT.setStation(${i},'code',this.value)"></div>
+      <div><input type="text" value="${s.name}" onchange="SRT.setStation(${i},'name',this.value)"></div>
+      <div><input type="number" value="${s.km}" onchange="SRT.setStation(${i},'km',this.value)"></div>
+      <div style="font-size:12px; color:var(--muted); display:flex; align-items:center;">${gLabel[s.group]||s.group||"north"}</div>
+      <div><button class="icon-btn" onclick="SRT.delStation(${i})">🗑</button></div>
+    </div>`;
+  }).join("") + (filtered.length>60 ? `<p class="hint">แสดง 60 จาก ${filtered.length} รายการที่ตรงกับคำค้นหา — พิมพ์คำค้นหาให้เจาะจงขึ้นเพื่อดูสถานีอื่น</p>` : "");
+}
+
+window.SRT = {
+  setType: async (i, field, val)=>{ settings.itemTypes[i][field] = num(val); await saveSettings(); populateStationSelect(); renderAllCards(); },
+  setMotoFee: async (i, bracketIdx, val)=>{ settings.itemTypes[i].feeBrackets[bracketIdx].fee = num(val); await saveSettings(); renderAllCards(); },
+  setTypeUpDown: async (i, field, val)=>{ settings.itemTypes[i][field] = num(val); await saveSettings(); },
+  setStation: async (i, field, val)=>{
+    settings.stations[i][field] = (field==="km") ? num(val) : val;
+    await saveSettings(); populateStationSelect();
+  },
+  delStation: async (i)=>{ settings.stations.splice(i,1); await saveSettings(); renderSettings(); populateStationSelect(); },
+};
+
+document.getElementById("btn-add-station").addEventListener("click", async ()=>{
+  const code = prompt("รหัสสถานี:");
+  if(!code) return;
+  const name = prompt("ชื่อสถานี:");
+  if(!name) return;
+  const km = num(prompt("หลัก ก.ม. ของสถานีนี้:", "0"));
+  const group = prompt("กลุ่มอ้างอิง (north = เหนือ/อีสาน/ตะวันออก จาก กท., south = สายใต้ จาก ธบ., maeklong_a = แม่กลองฝั่งวงเวียนใหญ่, maeklong_b = แม่กลองฝั่งบ้านแหลม):", "north") || "north";
+  settings.stations.push({code, name, km, group});
+  await saveSettings();
+  renderSettings();
+  populateStationSelect();
+});
+
+/* ============================================================
+   INIT
+   ============================================================ */
+async function init(){
+  await loadSettings();
+  renderRateGrid();
+  populateStationSelect();
+  renderAllCards();
+}
+init();
+
+})();
+</script>
+</body>
+</html>
