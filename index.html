@@ -471,6 +471,7 @@ const FREIGHT_RATE_TABLE = [
 ];
 
 const DEFAULT_STATIONS = [
+  {code:"1000", name:"กรุงเทพอภิวัฒน์", km:8, group:"north"},
   {code:"1001", name:"กรุงเทพ", km:0, group:"north"},
   {code:"1002", name:"ยมราช", km:2, group:"north"},
   {code:"1003", name:"หอประแจจิตรลดา", km:3, group:"north"},
@@ -1209,7 +1210,8 @@ async function loadSettings(){
       if(needsTypeMigration){ settings.itemTypes = JSON.parse(JSON.stringify(DEFAULT_ITEM_TYPES)); }
       const needsStationMigration = !Array.isArray(settings.stations) || settings.stations.length < 600 ||
         typeof settings.stations[0].km !== "number" || !settings.stations[0].group ||
-        !settings.stations.some(s=>s.group==="south");
+        !settings.stations.some(s=>s.group==="south") ||
+        !settings.stations.some(s=>s.code==="1000");
       if(needsStationMigration){ settings.stations = JSON.parse(JSON.stringify(DEFAULT_STATIONS)); }
       if(needsTypeMigration || needsStationMigration){ await saveSettings(); }
     }
